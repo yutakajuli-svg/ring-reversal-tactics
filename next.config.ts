@@ -1,5 +1,6 @@
-import type { NextConfig } from 'next';
+const isGitHubPages = process.env.GITHUB_ACTIONS === 'true';
 
-const nextConfig: NextConfig = {};
-
-export default nextConfig;
+export default {
+  output: isGitHubPages ? 'export' : undefined,
+  basePath: isGitHubPages ? '/ring-reversal-tactics' : undefined,
+};
