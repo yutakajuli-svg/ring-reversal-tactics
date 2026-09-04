@@ -56,8 +56,7 @@ function makeCpuIntent(cpu: Pos, player: Pos): Intent {
   candidates.sort((a, b) => (Math.abs(cpu.r - a.r) + Math.abs(cpu.c - a.c)) - (Math.abs(cpu.r - b.r) + Math.abs(cpu.c - b.c)));
   const full = candidates.length ? shortestPath(cpu, candidates[0], player) : [];
   const path = full.slice(0, 2), end = path.at(-1) ?? cpu;
-  const canStrike = Math.abs(end.r - player.r) + Math.abs(end.c - player.c) === 1;
-  return { kind: 'advance', path, attack: canStrike ? player : undefined, facing: canStrike ? faceToward(end, player) : path.length ? faceToward(path.at(-2) ?? cpu, end) : faceToward(cpu, player) };
+  return { kind: 'advance', path, facing: path.length ? faceToward(path.at(-2) ?? cpu, end) : faceToward(cpu, player) };
 }
 
 function reboundIntent(cpu: Pos, travel: Facing): Intent {
@@ -145,13 +144,16 @@ export default function Home() {
       if (!stopped) logLine = 'CPUがロープから反動して走り抜けた。';
     } else {
       nextCpu = intent.path.at(-1) ?? cpu;
-      if (intent.attack && same(intent.attack, nextPlayer)) {
+      const cpuCanStrike = Math.abs(nextCpu.r - nextPlayer.r) + Math.abs(nextCpu.c - nextPlayer.c) === 1;
+      if (cpuCanStrike) {
+        const facing = faceToward(nextCpu, nextPlayer);
+        setCpuFacing(facing);
         const d = roll();
-        if (d >= 4) { nextHits.cpu += 1; logLine = `CPU STRIKE成功。1D6=${d}`; }
-        else logLine = `CPU STRIKE失敗。1D6=${d}`;
-      } else logLine = intent.attack ? 'PLAYERが攻撃予定地点から逃れた。' : 'CPUが距離を詰めた。';
+        if (d >= 4) { nextHits.cpu += 1; logLine = 'CPU STRIKE  HIT！'; }
+        else logLine = 'CPU STRIKE  MISS。';
+      } else logLine = 'CPUが距離を詰めた。';
     }
-    setCpu(nextCpu); setCpuFacing(intent.facing); setHits(nextHits); addLog(logLine);
+    setCpu(nextCpu); if (intent.kind === 'rebound') setCpuFacing(intent.facing); setHits(nextHits); addLog(logLine);
     if (nextHits.player >= 3 || nextHits.cpu >= 3) {
       const result = nextHits.player >= 3 ? 'PLAYER' : 'CPU'; setWinner(result); setMessage(`${result} WIN！`); return;
     }
@@ -168,7 +170,7 @@ export default function Home() {
     if (!cpuInFront) { setMessage('STRIKEは正面にいる相手、または正面のREBOUND経路を迎撃します。'); return; }
     const d = roll(), nextHits = { ...hits };
     if (d >= 4) nextHits.player += 1;
-    setHits(nextHits); addLog(`PLAYER STRIKE ${d >= 4 ? '成功' : '失敗'}。1D6=${d}`);
+    setHits(nextHits); addLog(`PLAYER STRIKE  ${d >= 4 ? 'HIT！' : 'MISS。'}`);
     if (nextHits.player >= 3) { setWinner('PLAYER'); setMessage('PLAYER WIN！'); return; }
     setTimeout(() => finishRound(player, false, null, nextHits), 260);
   }
@@ -176,12 +178,12 @@ export default function Home() {
   function whip() {
     if (winner || !cpuInFront) { setMessage('WHIPは正面にいる隣接相手を、向いているロープへ振ります。'); return; }
     const d = roll();
-    if (d < 4) { addLog(`PLAYER WHIP失敗。1D6=${d}`); setMessage('WHIP失敗。CPUが予定行動を実行します。'); setTimeout(() => finishRound(player), 260); return; }
+    if (d < 4) { addLog('PLAYER WHIP  MISS。'); setMessage('WHIP MISS。CPUが予定行動を実行します。'); setTimeout(() => finishRound(player), 260); return; }
     let edge = { ...cpu };
     while (inside({ r: edge.r + DIRS[playerFacing].r, c: edge.c + DIRS[playerFacing].c })) edge = { r: edge.r + DIRS[playerFacing].r, c: edge.c + DIRS[playerFacing].c };
     const returnDirection: Facing = playerFacing === 'N' ? 'S' : playerFacing === 'S' ? 'N' : playerFacing === 'E' ? 'W' : 'E';
     setCpu(edge); setCpuFacing(playerFacing); setIntent(reboundIntent(edge, returnDirection));
-    addLog(`WHIP成功！ 1D6=${d}。CPU予定をREBOUNDへ変更。`); setMessage('CPUの元の予定をキャンセル。次はREBOUNDです。');
+    addLog('PLAYER WHIP  HIT！ CPU予定をREBOUNDへ変更。'); setMessage('WHIP HIT！ CPUの元の予定をキャンセル。次はREBOUNDです。');
     setTimeout(() => finishRound(player, true), 260);
   }
 
