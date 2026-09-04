@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+export const dynamic = 'force-static';
+
 type Pos = { r: number; c: number };
 type Facing = 'N' | 'E' | 'S' | 'W';
 type IntentKind = 'advance' | 'strike' | 'rebound';
