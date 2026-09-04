@@ -98,9 +98,11 @@ export default function Home() {
   const reboundSet = new Set(intent.kind === 'rebound' ? intent.path.map((p) => `${p.r},${p.c}`) : []);
   const pathSet = new Set(intent.path.map((p) => `${p.r},${p.c}`));
   const attackKey = intent.attack ? `${intent.attack.r},${intent.attack.c}` : '';
-  const frontTile = front(player, playerFacing);
-  const adjacentFront = same(frontTile, cpu);
-  const canReserve = intent.kind === 'rebound' && reboundSet.has(`${frontTile.r},${frontTile.c}`);
+  const cpuAdjacent = Math.abs(player.r - cpu.r) + Math.abs(player.c - cpu.c) === 1;
+  const reserveTarget = intent.kind === 'rebound'
+    ? intent.path.find((p) => Math.abs(player.r - p.r) + Math.abs(player.c - p.c) === 1)
+    : undefined;
+  const canReserve = Boolean(reserveTarget);
 
   function addLog(line: string) { setHistory((old) => [line, ...old].slice(0, 7)); }
 
@@ -152,11 +154,12 @@ export default function Home() {
 
   function strike() {
     if (winner) return;
-    if (canReserve) {
-      setReservedStrike(frontTile); setMessage('STRIKEを予約。CPUがそのマスへ入ると迎撃します。'); addLog('PLAYER：REBOUNDへの迎撃STRIKEを予約。');
-      setTimeout(() => finishRound(player, false, frontTile), 260); return;
+    if (reserveTarget) {
+      setPlayerFacing(faceToward(player, reserveTarget)); setReservedStrike(reserveTarget); setMessage('迎撃を予約。CPUが隣のマスへ入るとSTRIKEします。'); addLog('PLAYER：REBOUNDへの迎撃STRIKEを予約。');
+      setTimeout(() => finishRound(player, false, reserveTarget), 260); return;
     }
-    if (!adjacentFront) { setMessage('STRIKEは正面1マスにいる相手、またはREBOUND経路へ使えます。'); return; }
+    if (!cpuAdjacent) { setMessage('STRIKEは隣接した相手、またはREBOUND経路への迎撃に使えます。'); return; }
+    setPlayerFacing(faceToward(player, cpu));
     const d = roll(), nextHits = { ...hits };
     if (d >= 4) nextHits.player += 1;
     setHits(nextHits); addLog(`PLAYER STRIKE ${d >= 4 ? '成功' : '失敗'}。1D6=${d}`);
@@ -165,7 +168,8 @@ export default function Home() {
   }
 
   function whip(direction: Facing) {
-    if (winner || !adjacentFront) { setWhipMode(false); setMessage('WHIPは正面1マスの相手に使います。'); return; }
+    if (winner || !cpuAdjacent) { setWhipMode(false); setMessage('WHIPは隣接した相手に使います。'); return; }
+    setPlayerFacing(faceToward(player, cpu));
     const d = roll();
     if (d < 4) { addLog(`PLAYER WHIP失敗。1D6=${d}`); setMessage('WHIP失敗。CPUが予定行動を実行します。'); setWhipMode(false); setTimeout(() => finishRound(player), 260); return; }
     let edge = { ...cpu };
@@ -209,6 +213,11 @@ export default function Home() {
         <div className="versus">FIRST TO 3</div>
         <div className="fighter-card cpu-card"><div><span>CPU</span><strong>RED CORNER</strong></div><div className="hit-pips" aria-label={`成功打撃 ${hits.cpu}/3`}>{[0,1,2].map((n)=><i key={n} className={n<hits.cpu?'on':''}/>)}</div></div>
       </section>
+      <section className={`phase-callout ${moved ? 'action-phase' : 'move-phase'}`}>
+        <b>{moved ? '② 技を選ぶ' : '① 移動先を選ぶ'}</b>
+        <span>{moved ? (cpuAdjacent ? '相手が隣です。STRIKEかWHIPを選べます。' : reserveTarget ? '反動経路が隣です。STRIKEで迎撃できます。' : '攻撃できなければENDで行動を終えます。') : '緑のマスをクリック。動かない場合は「移動しない」。'}</span>
+        {!moved && <button onClick={() => { setMoved(true); setMessage('その場に留まりました。技を選んでください。'); }}>移動しない</button>}
+      </section>
       <div className="game-grid">
         <section className="intent-panel panel"><p className="panel-kicker">ENEMY INTENT</p><h2>{intentName}</h2><div className={`intent-symbol ${intent.kind}`} aria-hidden="true">{intent.kind==='rebound'?'⇠⇠⇠':intent.attack?'➜ ✦':'➜'}</div><p>{intent.kind==='rebound'?'ロープ反動で3マス直進':intent.attack?'表示ルートを移動後、赤いマスへ打撃':'PLAYERへ最大2マス接近'}</p><dl><div><dt>移動</dt><dd>{intent.path.length} マス</dd></div><div><dt>向き</dt><dd>{FACE_NAME[intent.facing]} {FACE_LABEL[intent.facing]}</dd></div></dl></section>
         <section className="ring-wrap" aria-label="7×7リング"><div className="ring-back-rope" aria-hidden="true"/><div className="board">
@@ -218,7 +227,7 @@ export default function Home() {
         </div><div className="ring-front-rope" aria-hidden="true"/><div className="ring-label">7 × 7 RING</div></section>
         <section className="log-panel panel"><p className="panel-kicker">MATCH LOG</p><ol>{history.map((line,i)=><li key={`${line}-${i}`} className={i===0?'latest':''}>{line}</li>)}</ol></section>
       </div>
-      <section className="command-deck"><output className="message" aria-live="polite">{message}</output><div className="controls"><div className="face-controls" aria-label="向きを変える"><span>FACE</span>{(Object.keys(DIRS) as Facing[]).map((d)=><button key={d} className={playerFacing===d?'selected':''} onClick={()=>{setPlayerFacing(d);setWhipMode(false)}} aria-label={`${FACE_NAME[d]}を向く`}>{FACE_LABEL[d]}</button>)}</div><div className="action-controls"><button className="action strike" onClick={strike}>STRIKE<small>{canReserve?'迎撃予約':'正面1マス'}</small></button><button className={`action whip ${whipMode?'selected':''}`} onClick={()=>{setWhipMode((v)=>!v);setMessage(adjacentFront?'振る方向を選んでください。':'先に正面1マスへ相手を捉えてください。')}}>WHIP<small>ロープへ振る</small></button><button className="action wait" onClick={()=>{addLog('PLAYERはアクションを使わずターン終了。');finishRound(player)}}>END<small>行動せず終了</small></button></div></div>
+      <section className="command-deck"><output className="message" aria-live="polite">{message}</output><div className="controls"><div className="face-controls" aria-label="向きを変える"><span>向きを手動変更</span>{(Object.keys(DIRS) as Facing[]).map((d)=><button key={d} className={playerFacing===d?'selected':''} onClick={()=>{setPlayerFacing(d);setWhipMode(false)}} aria-label={`${FACE_NAME[d]}を向く`}>{FACE_LABEL[d]}<small>{FACE_NAME[d]}</small></button>)}</div><div className="action-controls"><button className="action strike" onClick={strike} disabled={!cpuAdjacent&&!canReserve}>STRIKE<small>{canReserve?'反動を迎撃':cpuAdjacent?'隣の相手を攻撃':'相手へ近づく'}</small></button><button className={`action whip ${whipMode?'selected':''}`} disabled={!cpuAdjacent} onClick={()=>{setWhipMode((v)=>!v);setMessage('CPUを振る方向を選んでください。')}}>WHIP<small>{cpuAdjacent?'ロープへ振る':'隣接すると使用可'}</small></button><button className="action wait" onClick={()=>{addLog('PLAYERはアクションを使わずターン終了。');finishRound(player)}}>END<small>行動せず終了</small></button></div></div>
         {whipMode&&<div className="whip-directions"><span>WHIP DIRECTION</span>{(Object.keys(DIRS) as Facing[]).map((d)=><button key={d} onClick={()=>whip(d)}>{FACE_LABEL[d]} {FACE_NAME[d]}</button>)}</div>}
         <div className="legend"><span><i className="lg-move"/>移動可能</span><span><i className="lg-path"/>CPU移動</span><span><i className="lg-hit"/>攻撃地点</span><span><i className="lg-rebound"/>REBOUND</span></div>
       </section>
