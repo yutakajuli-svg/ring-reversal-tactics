@@ -56,11 +56,25 @@
   transform: translateX(-50%);
 }
 
+.ringside-grid-layer {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ringside-grid-line {
+  fill: none;
+  stroke: #8e877a;
+  stroke-width: 1.35;
+  stroke-linecap: butt;
+}
+
 .cube-face {
   position: absolute;
   inset: 0;
   display: block;
-  border: 2px solid #69737e;
 }
 
 .cube-top {
@@ -117,6 +131,21 @@
   background: linear-gradient(135deg, #65707c, #444e59);
 }
 
+.grid-layer {
+  position: absolute;
+  z-index: 29;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.grid-line {
+  fill: none;
+  stroke: #78828d;
+  stroke-width: 1.5;
+  stroke-linecap: butt;
+}
+
 .rope-layer {
   position: absolute;
   z-index: 30;
@@ -125,16 +154,8 @@
   pointer-events: none;
 }
 
-.rope-left-wrap-layer {
-  z-index: 50;
-}
-
-.rope-front-wrap-layer {
-  z-index: 60;
-}
-
-.rope-right-wrap-layer {
-  z-index: 50;
+.rope-rebound-layer {
+  z-index: 55;
 }
 
 .rope {
@@ -147,6 +168,10 @@
 
 .rope-far {
   opacity: .92;
+}
+
+.rope-rebound {
+  opacity: .46;
 }
 
 @media (max-width: 680px) {
