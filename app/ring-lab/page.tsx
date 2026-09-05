@@ -34,6 +34,38 @@ export default function RingLabPage() {
               }}
             />
           ))}
+          <svg className="ringside-grid-layer" viewBox="0 0 660 420" preserveAspectRatio="none">
+            {Array.from({ length: RINGSIDE_SIZE - 1 }, (_, index) => {
+              const boundary = index + 1;
+              const startX = 330 - boundary * 42;
+              const startY = 18 + boundary * 21;
+              const endX = startX + RINGSIDE_SIZE * 42;
+              const endY = startY + RINGSIDE_SIZE * 21;
+
+              return (
+                <path
+                  className="ringside-grid-line"
+                  d={`M${startX} ${startY} L${endX} ${endY}`}
+                  key={`ringside-grid-a-${index}`}
+                />
+              );
+            })}
+            {Array.from({ length: RINGSIDE_SIZE - 1 }, (_, index) => {
+              const boundary = index + 1;
+              const startX = 330 + boundary * 42;
+              const startY = 18 + boundary * 21;
+              const endX = startX - RINGSIDE_SIZE * 42;
+              const endY = startY + RINGSIDE_SIZE * 21;
+
+              return (
+                <path
+                  className="ringside-grid-line"
+                  d={`M${startX} ${startY} L${endX} ${endY}`}
+                  key={`ringside-grid-b-${index}`}
+                />
+              );
+            })}
+          </svg>
           {cubes.map(({ r, c }) => (
             <i
               className="tile-cube"
@@ -73,34 +105,87 @@ export default function RingLabPage() {
             </i>
             );
           })}
+          <svg className="grid-layer" viewBox="0 0 660 420" preserveAspectRatio="none">
+            {Array.from({ length: SIZE - 1 }, (_, index) => {
+              const boundary = index + 1;
+              const startX = 330 - boundary * 42;
+              const startY = 18 + boundary * 21;
+              const endX = startX + SIZE * 42;
+              const endY = startY + SIZE * 21;
+
+              return (
+                <path
+                  className="grid-line"
+                  d={`M${startX} ${startY} L${endX} ${endY}`}
+                  key={`grid-a-${index}`}
+                />
+              );
+            })}
+            {Array.from({ length: SIZE - 1 }, (_, index) => {
+              const boundary = index + 1;
+              const startX = 330 + boundary * 42;
+              const startY = 18 + boundary * 21;
+              const endX = startX - SIZE * 42;
+              const endY = startY + SIZE * 21;
+
+              return (
+                <path
+                  className="grid-line"
+                  d={`M${startX} ${startY} L${endX} ${endY}`}
+                  key={`grid-b-${index}`}
+                />
+              );
+            })}
+          </svg>
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
-                <path className="rope rope-far" d="M372 24 L624 150" />
-                <path className="rope rope-far" d="M36 150 L288 24" />
-                <path className="rope rope-far" d="M120 192 L288 276" />
-                <path className="rope rope-far" d="M372 276 L540 192" />
+                <path className="rope rope-far" d="M372 24 L624 150">
+                  <animate
+                    attributeName="d"
+                    dur="1.2s"
+                    calcMode="discrete"
+                    keyTimes="0;.5"
+                    values="M372 24 L624 150;M372 24 Q507 69 624 150"
+                    repeatCount="indefinite"
+                  />
+                </path>
+                <path className="rope rope-far" d="M36 150 L288 24">
+                  <animate
+                    attributeName="d"
+                    dur="1.2s"
+                    calcMode="discrete"
+                    keyTimes="0;.5"
+                    values="M36 150 L288 24;M36 150 Q153 69 288 24"
+                    repeatCount="indefinite"
+                  />
+                </path>
               </g>
             ))}
           </svg>
-          <svg className="rope-layer rope-left-wrap-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
+          <svg className="rope-layer rope-rebound-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
-                <path className="rope rope-far" d="M36 150 L120 192" />
-              </g>
-            ))}
-          </svg>
-          <svg className="rope-layer rope-front-wrap-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
-            {[-46, -27, -8].map((height) => (
-              <g key={height} transform={`translate(0 ${height})`}>
-                <path className="rope rope-far" d="M288 276 L330 297 L372 276" />
-              </g>
-            ))}
-          </svg>
-          <svg className="rope-layer rope-right-wrap-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
-            {[-46, -27, -8].map((height) => (
-              <g key={height} transform={`translate(0 ${height})`}>
-                <path className="rope rope-far" d="M540 192 L624 150" />
+                <path className="rope rope-rebound" d="M36 150 L330 297">
+                  <animate
+                    attributeName="d"
+                    dur="1.2s"
+                    calcMode="discrete"
+                    keyTimes="0;.5"
+                    values="M36 150 L330 297;M36 150 Q174 242 330 297"
+                    repeatCount="indefinite"
+                  />
+                </path>
+                <path className="rope rope-rebound" d="M330 297 L624 150">
+                  <animate
+                    attributeName="d"
+                    dur="1.2s"
+                    calcMode="discrete"
+                    keyTimes="0;.5"
+                    values="M330 297 L624 150;M330 297 Q486 242 624 150"
+                    repeatCount="indefinite"
+                  />
+                </path>
               </g>
             ))}
           </svg>
