@@ -49,9 +49,17 @@ export default function RingLabPage() {
               <b className="cube-face cube-right" />
             </i>
           ))}
-          {corners.map(({ r, c }) => (
+          {corners.map(({ r, c }) => {
+            const colorClass =
+              r === SIZE - 1 && c === 0
+                ? 'corner-red'
+                : r === 0 && c === SIZE - 1
+                  ? 'corner-blue'
+                  : 'corner-neutral-dark';
+
+            return (
             <i
-              className="tile-cube corner-cube"
+              className={`tile-cube corner-cube ${colorClass}`}
               key={`corner-${r}-${c}`}
               style={{
                 left: `calc(50% + ${(c - r) * 42}px)`,
@@ -63,13 +71,15 @@ export default function RingLabPage() {
               <b className="cube-face cube-left" />
               <b className="cube-face cube-right" />
             </i>
-          ))}
+            );
+          })}
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
                 <path className="rope rope-far" d="M372 24 L624 150" />
                 <path className="rope rope-far" d="M36 150 L288 24" />
                 <path className="rope rope-far" d="M120 192 L288 276" />
+                <path className="rope rope-far" d="M372 276 L540 192" />
               </g>
             ))}
           </svg>
@@ -77,6 +87,20 @@ export default function RingLabPage() {
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
                 <path className="rope rope-far" d="M36 150 L120 192" />
+              </g>
+            ))}
+          </svg>
+          <svg className="rope-layer rope-front-wrap-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
+            {[-46, -27, -8].map((height) => (
+              <g key={height} transform={`translate(0 ${height})`}>
+                <path className="rope rope-far" d="M288 276 L330 297 L372 276" />
+              </g>
+            ))}
+          </svg>
+          <svg className="rope-layer rope-right-wrap-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
+            {[-46, -27, -8].map((height) => (
+              <g key={height} transform={`translate(0 ${height})`}>
+                <path className="rope rope-far" d="M540 192 L624 150" />
               </g>
             ))}
           </svg>
