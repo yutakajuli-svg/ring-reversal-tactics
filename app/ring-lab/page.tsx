@@ -62,6 +62,17 @@ const TOKEN_DESTINATIONS: Record<'ring' | 'corner' | 'ringside', BoardLocation> 
   ringside: { area: 'ringside', row: 6, column: -1 },
 };
 
+const HIDDEN_RINGSIDE_DESTINATION: BoardLocation = {
+  area: 'ringside',
+  // C1: the far-side mat behind the default B2 red corner.
+  row: -1,
+  column: 1,
+};
+
+// Each wrestler has a world cell, height and facing. Shapes can change later,
+// but this board attachment is shared by every piece.
+const CPU_LOCATION: BoardLocation = { area: 'ring', row: 0, column: 3 };
+
 type BoardRotation = 0 | 1 | 2 | 3;
 
 function rotateCell(row: number, column: number, size: number, rotation: BoardRotation) {
@@ -84,16 +95,15 @@ function rotateWorldCell(row: number, column: number, rotation: BoardRotation) {
 
 function boardPosition(location: BoardLocation, rotation: BoardRotation) {
   const { row, column } = rotateWorldCell(location.row, location.column, rotation);
-  // The ring occupies world rows/columns 0–6 at height 1.
-  // The surrounding mat is the same 9×9 world grid (−1–7) at height 0.
-  // A wrestler on a corner post is height 3: two levels above the ring surface.
-  const height = location.area === 'corner' ? 2 : location.area === 'ringside' ? -1 : 0;
-  const baseTop = 18 + (row + column) * 21;
+  // A piece is positioned by its feet, not by the top-left of its cube image.
+  // Ring cells begin at 18; the 9×9 ringside floor is one rendered level lower.
+  const floorTop = (location.area === 'ringside' ? 60 : 18) + (row + column) * 21;
+  const standingLevels = location.area === 'corner' ? 2 : 1;
 
   return {
     left: `calc(50% + ${(column - row) * 42}px)`,
-    top: `${baseTop - height * 42}px`,
-    zIndex: 38 + row + column + height * 8,
+    top: `${floorTop - standingLevels * 42}px`,
+    zIndex: 38 + row + column + standingLevels * 8,
   };
 }
 
@@ -175,6 +185,16 @@ export default function RingLabPage() {
     setBoardRotation((current) => ((current + direction + 4) % 4) as BoardRotation);
   };
 
+  const movePlayer = (location: BoardLocation, keepVisible = false) => {
+    setPlayerLocation(location);
+
+    // A hidden ringside move flips the board 180°. The two colored corners
+    // swap to the front, and the piece's world cell stays exactly the same.
+    if (keepVisible) {
+      setBoardRotation((current) => ((current + 2) % 4) as BoardRotation);
+    }
+  };
+
   return (
     <main className="ring-lab">
       <p>RING SHAPE STUDY</p>
@@ -182,24 +202,27 @@ export default function RingLabPage() {
       <div className="movement-controls" aria-label="選手コマの移動テスト">
         <button
           className={playerLocation.area === 'ring' ? 'is-active' : undefined}
-          onClick={() => setPlayerLocation(TOKEN_DESTINATIONS.ring)}
+          onClick={() => movePlayer(TOKEN_DESTINATIONS.ring)}
           type="button"
         >
           リング上
         </button>
         <button
           className={playerLocation.area === 'corner' ? 'is-active' : undefined}
-          onClick={() => setPlayerLocation(TOKEN_DESTINATIONS.corner)}
+          onClick={() => movePlayer(TOKEN_DESTINATIONS.corner)}
           type="button"
         >
           コーナー上
         </button>
         <button
           className={playerLocation.area === 'ringside' ? 'is-active' : undefined}
-          onClick={() => setPlayerLocation(TOKEN_DESTINATIONS.ringside)}
+          onClick={() => movePlayer(TOKEN_DESTINATIONS.ringside)}
           type="button"
         >
           場外
+        </button>
+        <button onClick={() => movePlayer(HIDDEN_RINGSIDE_DESTINATION, true)} type="button">
+          奥側へ場外
         </button>
       </div>
       <div className="board-rotation-controls" aria-label="盤面の回転テスト">
@@ -346,7 +369,7 @@ export default function RingLabPage() {
             colorClass="corner-blue"
             facing={rotateFacingWithBoard('left-front', boardRotation)}
             label="CPU選手コマ"
-            style={boardPosition({ area: 'ring', row: -1, column: 2 }, boardRotation)}
+            style={boardPosition(CPU_LOCATION, boardRotation)}
           />
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
