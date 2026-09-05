@@ -119,6 +119,115 @@
   background: linear-gradient(135deg, #2869a4, #102f59);
 }
 
+.wrestler-cube .cube-eye {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #11141c;
+  box-shadow: 0 0 0 1px #ffffff35;
+}
+
+.wrestler-cube .cube-eye-pair {
+  position: absolute;
+  display: block;
+  inset: 0;
+}
+
+.wrestler-cube .cube-front-edge {
+  position: absolute;
+  z-index: 5;
+  display: none;
+  height: 3px;
+  border-radius: 3px;
+  background: #f2bf43;
+  box-shadow: 0 0 2px #fff6;
+  pointer-events: none;
+}
+
+/* The pair sits on the visible right/front face: both pieces face the right-front rope. */
+.wrestler-cube .cube-right .cube-eye-one {
+  top: 48px;
+  left: 57px;
+}
+
+.wrestler-cube .cube-right .cube-eye-two {
+  top: 43px;
+  left: 68px;
+}
+
+.wrestler-cube .cube-left .cube-eye-one {
+  top: 43px;
+  left: 18px;
+}
+
+.wrestler-cube .cube-left .cube-eye-two {
+  top: 48px;
+  left: 29px;
+}
+
+.wrestler-cube .cube-eye-pair--right {
+}
+
+.wrestler-cube .cube-eye-pair--left {
+  opacity: 0;
+}
+
+.wrestler-cube--right-back .cube-eye-pair--right {
+  opacity: 0;
+}
+
+/* The highlighted top edge is the border of the face looking at the right-back rope. */
+.wrestler-cube--right-back .cube-front-edge {
+  top: 2px;
+  left: 40px;
+  display: block;
+  width: 42px;
+  transform: rotate(26.565deg);
+  transform-origin: left center;
+}
+
+/* One clockwise quarter-turn: right-front rope → right-back rope.
+   The ears stay attached to the same part of the top face while the visible
+   back and right-side faces exchange roles. */
+.wrestler-cube--right-back.corner-red .cube-left {
+  background: linear-gradient(135deg, #97263a, #56111f);
+}
+
+.wrestler-cube--right-back.corner-red .cube-right {
+  background: linear-gradient(135deg, #dc4b5b, #8b2031);
+}
+
+.wrestler-cube--right-back.corner-blue .cube-left {
+  background: linear-gradient(135deg, #2869a4, #102f59);
+}
+
+.wrestler-cube--right-back.corner-blue .cube-right {
+  background: linear-gradient(135deg, #4295d4, #1d568e);
+}
+
+@keyframes cube-marker-turn {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* right-front → right-back → left-back → left-front */
+@keyframes cube-right-face {
+  0%, 24.9% { opacity: 1; }
+  25%, 100% { opacity: 0; }
+}
+
+@keyframes cube-left-face {
+  0%, 74.9% { opacity: 0; }
+  75%, 99.9% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .corner-neutral-dark .cube-top {
   background: #adb4bd;
 }
@@ -199,8 +308,17 @@
   box-shadow: inset 6px 5px 6px #ffffff6b, inset -7px -7px 7px #0004, 0 2px 1px #05070a70;
 }
 
-.piece-eye {
+.piece-face {
   z-index: 2;
+  display: flex !important;
+  gap: 4px;
+  width: 14px;
+  height: 5px;
+}
+
+.piece-eye {
+  display: block;
+  flex: 0 0 5px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -222,88 +340,52 @@
 }
 
 .wrestler-piece--face-study .piece-head {
-  bottom: 5px;
+  right: 18px;
+  bottom: 8px;
+  left: 18px;
+  height: 26px;
 }
 
-/* Two dots stay visible, but their placement is the facing indicator. */
-.face-front .piece-eye-one {
-  bottom: 49px;
-  left: 21px;
+.wrestler-piece--face-study .piece-face {
+  bottom: 12px;
+  left: 24px;
+  animation: face-turn 3.6s ease-in-out infinite;
 }
 
-.face-front .piece-eye-two {
-  bottom: 49px;
-  left: 35px;
+.wrestler-piece--face-study.wrestler-piece-cpu .piece-face {
+  animation-delay: -1.6s;
 }
 
-.face-back .piece-eye-one {
-  bottom: 61px;
-  left: 21px;
-}
+@keyframes face-turn {
+  /* The face turns around the vertical axis: front rope, right rope,
+     back rope, then left rope. It does not roll over the top of the head. */
+  0%, 100% {
+    bottom: 12px;
+    left: 24px;
+    opacity: 1;
+    transform: scaleX(1);
+  }
 
-.face-back .piece-eye-two {
-  bottom: 61px;
-  left: 35px;
-}
+  25% {
+    bottom: 19px;
+    left: 32px;
+    opacity: .9;
+    transform: scaleX(.7);
+  }
 
-.face-right .piece-eye-one {
-  right: 16px;
-  bottom: 56px;
-}
+  50% {
+    bottom: 24px;
+    left: 24px;
+    opacity: 0;
+    transform: scaleX(.35);
+  }
 
-.face-right .piece-eye-two {
-  right: 16px;
-  bottom: 45px;
-}
-
-.face-left .piece-eye-one {
-  bottom: 56px;
-  left: 16px;
-}
-
-.face-left .piece-eye-two {
-  bottom: 45px;
-  left: 16px;
-}
-
-.wrestler-piece--face-study.face-front .piece-eye-one {
-  bottom: 17px;
-  left: 21px;
-}
-
-.wrestler-piece--face-study.face-front .piece-eye-two {
-  bottom: 17px;
-  left: 35px;
-}
-
-.wrestler-piece--face-study.face-back .piece-eye-one {
-  bottom: 29px;
-  left: 21px;
-}
-
-.wrestler-piece--face-study.face-back .piece-eye-two {
-  bottom: 29px;
-  left: 35px;
-}
-
-.wrestler-piece--face-study.face-right .piece-eye-one {
-  right: 16px;
-  bottom: 19px;
-}
-
-.wrestler-piece--face-study.face-right .piece-eye-two {
-  right: 25px;
-  bottom: 19px;
-}
-
-.wrestler-piece--face-study.face-left .piece-eye-one {
-  bottom: 19px;
-  left: 16px;
-}
-
-.wrestler-piece--face-study.face-left .piece-eye-two {
-  bottom: 19px;
-  left: 25px;
+  75% {
+    bottom: 19px;
+    left: 16px;
+    opacity: .9;
+    transform: scaleX(.7);
+  }
 }
 
 .wrestler-piece-player .piece-base,
