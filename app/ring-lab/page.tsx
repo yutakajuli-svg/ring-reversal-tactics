@@ -137,30 +137,48 @@ export default function RingLabPage() {
               );
             })}
           </svg>
-          <div
-            className="wrestler-piece wrestler-piece--face-study wrestler-piece-player face-right"
-            aria-label="プレイヤー選手（仮コマ）"
-            style={{ left: '204px', top: '171px' }}
+          <i
+            className="tile-cube wrestler-cube wrestler-cube--right-back corner-red"
+            aria-label="プレイヤー選手コマ"
+            style={{ left: 'calc(50% - 126px)', top: '81px', zIndex: 47 }}
           >
-            <span className="piece-shadow" />
-            <span className="piece-base" />
-            <span className="piece-body" />
-            <span className="piece-head" />
-            <span className="piece-eye piece-eye-one" />
-            <span className="piece-eye piece-eye-two" />
-          </div>
-          <div
-            className="wrestler-piece wrestler-piece--face-study wrestler-piece-cpu face-left"
-            aria-label="CPU選手（仮コマ）"
-            style={{ left: '456px', top: '129px' }}
+            <b className="cube-face cube-top">
+              <i className="cube-front-edge" />
+            </b>
+            <b className="cube-face cube-left">
+              <span className="cube-eye-pair cube-eye-pair--left">
+                <i className="cube-eye cube-eye-one" />
+                <i className="cube-eye cube-eye-two" />
+              </span>
+            </b>
+            <b className="cube-face cube-right">
+              <span className="cube-eye-pair cube-eye-pair--right">
+                <i className="cube-eye cube-eye-one" />
+                <i className="cube-eye cube-eye-two" />
+              </span>
+            </b>
+          </i>
+          <i
+            className="tile-cube wrestler-cube wrestler-cube--right-back corner-blue"
+            aria-label="CPU選手コマ"
+            style={{ left: 'calc(50% + 126px)', top: '39px', zIndex: 47 }}
           >
-            <span className="piece-shadow" />
-            <span className="piece-base" />
-            <span className="piece-body" />
-            <span className="piece-head" />
-            <span className="piece-eye piece-eye-one" />
-            <span className="piece-eye piece-eye-two" />
-          </div>
+            <b className="cube-face cube-top">
+              <i className="cube-front-edge" />
+            </b>
+            <b className="cube-face cube-left">
+              <span className="cube-eye-pair cube-eye-pair--left">
+                <i className="cube-eye cube-eye-one" />
+                <i className="cube-eye cube-eye-two" />
+              </span>
+            </b>
+            <b className="cube-face cube-right">
+              <span className="cube-eye-pair cube-eye-pair--right">
+                <i className="cube-eye cube-eye-one" />
+                <i className="cube-eye cube-eye-two" />
+              </span>
+            </b>
+          </i>
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
