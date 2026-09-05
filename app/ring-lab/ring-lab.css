@@ -44,8 +44,8 @@
   height: 42px;
   transform: translateX(-50%);
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  border: 1px solid #18233a;
-  background: #31435f;
+  border: 1px solid #9e9788;
+  background: #d8cfba;
 }
 
 .tile-cube {
@@ -60,25 +60,61 @@
   position: absolute;
   inset: 0;
   display: block;
-  border: 1px solid #716c66;
+  border: 2px solid #69737e;
 }
 
 .cube-top {
   z-index: 3;
-  background: #e4dcc9;
+  background: #c7cbd0;
   clip-path: polygon(50% 0, 100% 25%, 50% 50%, 0 25%);
 }
 
 .cube-left {
   z-index: 2;
-  background: linear-gradient(135deg, #a93a4e, #6b1c2d);
+  background: linear-gradient(135deg, #89919b, #626a75);
   clip-path: polygon(0 25%, 50% 50%, 50% 100%, 0 75%);
 }
 
 .cube-right {
   z-index: 1;
-  background: linear-gradient(135deg, #742034, #3f111e);
+  background: linear-gradient(135deg, #67717d, #48525e);
   clip-path: polygon(50% 50%, 100% 25%, 100% 75%, 50% 100%);
+}
+
+.corner-red .cube-top {
+  background: #f2d8d4;
+}
+
+.corner-red .cube-left {
+  background: linear-gradient(135deg, #dc4b5b, #8b2031);
+}
+
+.corner-red .cube-right {
+  background: linear-gradient(135deg, #97263a, #56111f);
+}
+
+.corner-blue .cube-top {
+  background: #d7e6f3;
+}
+
+.corner-blue .cube-left {
+  background: linear-gradient(135deg, #4295d4, #1d568e);
+}
+
+.corner-blue .cube-right {
+  background: linear-gradient(135deg, #2869a4, #102f59);
+}
+
+.corner-neutral-dark .cube-top {
+  background: #adb4bd;
+}
+
+.corner-neutral-dark .cube-left {
+  background: linear-gradient(135deg, #7d8792, #59636e);
+}
+
+.corner-neutral-dark .cube-right {
+  background: linear-gradient(135deg, #65707c, #444e59);
 }
 
 .rope-layer {
@@ -90,6 +126,14 @@
 }
 
 .rope-left-wrap-layer {
+  z-index: 50;
+}
+
+.rope-front-wrap-layer {
+  z-index: 60;
+}
+
+.rope-right-wrap-layer {
   z-index: 50;
 }
 
