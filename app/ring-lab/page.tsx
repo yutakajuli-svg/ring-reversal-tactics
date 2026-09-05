@@ -138,7 +138,7 @@ export default function RingLabPage() {
             })}
           </svg>
           <div
-            className="wrestler-piece wrestler-piece-player"
+            className="wrestler-piece wrestler-piece--face-study wrestler-piece-player face-right"
             aria-label="プレイヤー選手（仮コマ）"
             style={{ left: '204px', top: '171px' }}
           >
@@ -146,9 +146,11 @@ export default function RingLabPage() {
             <span className="piece-base" />
             <span className="piece-body" />
             <span className="piece-head" />
+            <span className="piece-eye piece-eye-one" />
+            <span className="piece-eye piece-eye-two" />
           </div>
           <div
-            className="wrestler-piece wrestler-piece-cpu"
+            className="wrestler-piece wrestler-piece--face-study wrestler-piece-cpu face-left"
             aria-label="CPU選手（仮コマ）"
             style={{ left: '456px', top: '129px' }}
           >
@@ -156,6 +158,8 @@ export default function RingLabPage() {
             <span className="piece-base" />
             <span className="piece-body" />
             <span className="piece-head" />
+            <span className="piece-eye piece-eye-one" />
+            <span className="piece-eye piece-eye-two" />
           </div>
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
