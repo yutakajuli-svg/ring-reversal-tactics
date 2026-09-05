@@ -1,7 +1,11 @@
+'use client';
+
+import { useState } from 'react';
 import './ring-lab.css';
 
 const SIZE = 7;
 const RINGSIDE_SIZE = 9;
+const BOARD_CENTER_SIZE = RINGSIDE_SIZE;
 const cubes = Array.from({ length: SIZE * SIZE }, (_, index) => ({
   r: Math.floor(index / SIZE),
   c: index % SIZE,
@@ -17,22 +21,211 @@ const corners = [
   { r: SIZE - 1, c: SIZE - 1 },
 ];
 
+const TURN_ORDER = ['right-front', 'right-back', 'left-back', 'left-front'] as const;
+type RingSide = (typeof TURN_ORDER)[number];
+type CubeSurface = 'front' | 'right' | 'back' | 'left' | 'top' | 'bottom';
+
+const SURFACE_TURNS: Record<CubeSurface, number | null> = {
+  front: 0,
+  right: 1,
+  back: 2,
+  left: 3,
+  top: null,
+  bottom: null,
+};
+
+const SCREEN_SURFACES = {
+  'right-front': {
+    edge: 'M42 42 L84 21',
+  },
+  'right-back': { edge: 'M42 0 L84 21' },
+  'left-back': { edge: 'M0 21 L42 0' },
+  'left-front': {
+    edge: 'M0 21 L42 42',
+  },
+} as const;
+
+const TOP_SURFACE = { edge: 'M42 0 L84 21' } as const;
+const FRONT_EYES = [
+  { surface: 'front' as const, u: 0.357, v: 0.321 },
+  { surface: 'front' as const, u: 0.619, v: 0.333 },
+];
+
+type BoardLocation =
+  | { area: 'ring'; row: number; column: number }
+  | { area: 'corner'; row: number; column: number }
+  | { area: 'ringside'; row: number; column: number };
+
+const TOKEN_DESTINATIONS: Record<'ring' | 'corner' | 'ringside', BoardLocation> = {
+  ring: { area: 'ring', row: 3, column: 0 },
+  corner: { area: 'corner', row: 6, column: 0 },
+  ringside: { area: 'ringside', row: 6, column: -1 },
+};
+
+type BoardRotation = 0 | 1 | 2 | 3;
+
+function rotateCell(row: number, column: number, size: number, rotation: BoardRotation) {
+  let rotatedRow = row;
+  let rotatedColumn = column;
+
+  for (let turn = 0; turn < rotation; turn += 1) {
+    [rotatedRow, rotatedColumn] = [rotatedColumn, size - 1 - rotatedRow];
+  }
+
+  return { row: rotatedRow, column: rotatedColumn };
+}
+
+// Everything on the ring uses one 9×9 world coordinate system. The ring is
+// the inner 7×7 cells (world coordinates 0–6); ringside is the outer border.
+function rotateWorldCell(row: number, column: number, rotation: BoardRotation) {
+  const rotated = rotateCell(row + 1, column + 1, BOARD_CENTER_SIZE, rotation);
+  return { row: rotated.row - 1, column: rotated.column - 1 };
+}
+
+function boardPosition(location: BoardLocation, rotation: BoardRotation) {
+  const { row, column } = rotateWorldCell(location.row, location.column, rotation);
+  // The ring occupies world rows/columns 0–6 at height 1.
+  // The surrounding mat is the same 9×9 world grid (−1–7) at height 0.
+  // A wrestler on a corner post is height 3: two levels above the ring surface.
+  const height = location.area === 'corner' ? 2 : location.area === 'ringside' ? -1 : 0;
+  const baseTop = 18 + (row + column) * 21;
+
+  return {
+    left: `calc(50% + ${(column - row) * 42}px)`,
+    top: `${baseTop - height * 42}px`,
+    zIndex: 38 + row + column + height * 8,
+  };
+}
+
+function rotateFacingWithBoard(facing: RingSide, rotation: BoardRotation): RingSide {
+  return TURN_ORDER[(TURN_ORDER.indexOf(facing) + rotation) % TURN_ORDER.length];
+}
+
+function rotateSurface(facing: RingSide, surface: CubeSurface): RingSide | 'top' | 'bottom' {
+  const surfaceTurns = SURFACE_TURNS[surface];
+  if (surfaceTurns === null) return surface;
+  const facingTurn = TURN_ORDER.indexOf(facing);
+  return TURN_ORDER[(facingTurn + surfaceTurns) % TURN_ORDER.length];
+}
+
+function projectCubeObject(
+  facing: RingSide,
+  surface: CubeSurface,
+  u: number,
+  v: number,
+): { x: number; y: number } | null {
+  const targetSurface = rotateSurface(facing, surface);
+
+  if (targetSurface === 'right-front') {
+    return { x: 42 + 42 * u, y: 42 - 21 * u + 42 * v };
+  }
+  if (targetSurface === 'left-front') {
+    return { x: 42 - 42 * u, y: 42 - 21 * u + 42 * v };
+  }
+  if (targetSurface === 'top') {
+    const turn = TURN_ORDER.indexOf(facing);
+    const topU = turn % 2 === 0 ? u : 1 - v;
+    const topV = turn % 2 === 0 ? v : u;
+    return { x: 42 + 42 * (topU - topV), y: 21 + 21 * (topU + topV) };
+  }
+
+  // A decal on the far or underside face remains attached, but is hidden by the cube.
+  return null;
+}
+
+function WrestlerCube({
+  colorClass,
+  facing,
+  label,
+  style,
+}: {
+  colorClass: 'corner-red' | 'corner-blue';
+  facing: RingSide;
+  label: string;
+  style: { left: string; top: string; zIndex: number };
+}) {
+  // Eyes and the gold edge are one decal glued to the token's physical front.
+  const frontSurface = rotateSurface(facing, 'front');
+  const mark = frontSurface === 'top' || frontSurface === 'bottom'
+    ? TOP_SURFACE
+    : SCREEN_SURFACES[frontSurface];
+  const eyes = FRONT_EYES.map(({ surface, u, v }) => projectCubeObject(facing, surface, u, v))
+    .filter((point): point is { x: number; y: number } => point !== null);
+
+  return (
+    <i className={`tile-cube wrestler-cube ${colorClass}`} aria-label={label} style={style}>
+      <b className="cube-face cube-top" />
+      <b className="cube-face cube-left" />
+      <b className="cube-face cube-right" />
+      <svg className="cube-facing-mark" viewBox="0 0 84 84" aria-hidden="true">
+        <path className="cube-facing-edge" d={mark.edge} />
+        {eyes.map(({ x, y }) => (
+          <circle className="cube-facing-eye" cx={x} cy={y} key={`${x}-${y}`} r="3" />
+        ))}
+      </svg>
+    </i>
+  );
+}
+
 export default function RingLabPage() {
+  const [playerLocation, setPlayerLocation] = useState<BoardLocation>(TOKEN_DESTINATIONS.ring);
+  const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
+
+  const turnBoard = (direction: 1 | -1) => {
+    setBoardRotation((current) => ((current + direction + 4) % 4) as BoardRotation);
+  };
+
   return (
     <main className="ring-lab">
       <p>RING SHAPE STUDY</p>
       <h1>7 × 7 CUBES</h1>
+      <div className="movement-controls" aria-label="選手コマの移動テスト">
+        <button
+          className={playerLocation.area === 'ring' ? 'is-active' : undefined}
+          onClick={() => setPlayerLocation(TOKEN_DESTINATIONS.ring)}
+          type="button"
+        >
+          リング上
+        </button>
+        <button
+          className={playerLocation.area === 'corner' ? 'is-active' : undefined}
+          onClick={() => setPlayerLocation(TOKEN_DESTINATIONS.corner)}
+          type="button"
+        >
+          コーナー上
+        </button>
+        <button
+          className={playerLocation.area === 'ringside' ? 'is-active' : undefined}
+          onClick={() => setPlayerLocation(TOKEN_DESTINATIONS.ringside)}
+          type="button"
+        >
+          場外
+        </button>
+      </div>
+      <div className="board-rotation-controls" aria-label="盤面の回転テスト">
+        <button onClick={() => turnBoard(-1)} type="button">
+          盤面 ↶
+        </button>
+        <button onClick={() => turnBoard(1)} type="button">
+          盤面 ↷
+        </button>
+      </div>
       <div className="cube-study" aria-label="立方体を七マスずつ並べたリングの土台">
         <div className="cube-board" aria-hidden="true">
           {ringsideTiles.map(({ r, c }) => (
-            <i
-              className="ringside-tile"
-              key={`ringside-${r}-${c}`}
-              style={{
-                left: `calc(50% + ${(c - r) * 42}px)`,
-                top: `${18 + (r + c) * 21}px`,
-              }}
-            />
+            (() => {
+              const rotated = rotateCell(r, c, RINGSIDE_SIZE, boardRotation);
+              return (
+                <i
+                  className="ringside-tile"
+                  key={`ringside-${r}-${c}`}
+                  style={{
+                    left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                    top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                  }}
+                />
+              );
+            })()
           ))}
           <svg className="ringside-grid-layer" viewBox="0 0 660 420" preserveAspectRatio="none">
             {Array.from({ length: RINGSIDE_SIZE - 1 }, (_, index) => {
@@ -67,19 +260,24 @@ export default function RingLabPage() {
             })}
           </svg>
           {cubes.map(({ r, c }) => (
-            <i
-              className="tile-cube"
-              key={`${r}-${c}`}
-              style={{
-                left: `calc(50% + ${(c - r) * 42}px)`,
-                top: `${18 + (r + c) * 21}px`,
-                zIndex: 10 + r + c,
-              }}
-            >
-              <b className="cube-face cube-top" />
-              <b className="cube-face cube-left" />
-              <b className="cube-face cube-right" />
-            </i>
+            (() => {
+              const rotated = rotateWorldCell(r, c, boardRotation);
+              return (
+                <i
+                  className="tile-cube"
+                  key={`${r}-${c}`}
+                  style={{
+                    left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                    top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                    zIndex: 10 + rotated.row + rotated.column,
+                  }}
+                >
+                  <b className="cube-face cube-top" />
+                  <b className="cube-face cube-left" />
+                  <b className="cube-face cube-right" />
+                </i>
+              );
+            })()
           ))}
           {corners.map(({ r, c }) => {
             const colorClass =
@@ -89,14 +287,15 @@ export default function RingLabPage() {
                   ? 'corner-blue'
                   : 'corner-neutral-dark';
 
+            const rotated = rotateWorldCell(r, c, boardRotation);
             return (
             <i
               className={`tile-cube corner-cube ${colorClass}`}
               key={`corner-${r}-${c}`}
               style={{
-                left: `calc(50% + ${(c - r) * 42}px)`,
-                top: `${18 + (r + c) * 21 - 42}px`,
-                zIndex: 40 + r + c,
+                left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
+                zIndex: 40 + rotated.row + rotated.column,
               }}
             >
               <b className="cube-face cube-top" />
@@ -137,48 +336,18 @@ export default function RingLabPage() {
               );
             })}
           </svg>
-          <i
-            className="tile-cube wrestler-cube wrestler-cube--left-front corner-red"
-            aria-label="プレイヤー選手コマ"
-            style={{ left: 'calc(50% - 126px)', top: '81px', zIndex: 47 }}
-          >
-            <b className="cube-face cube-top">
-              <i className="cube-front-edge" />
-            </b>
-            <b className="cube-face cube-left">
-              <span className="cube-eye-pair cube-eye-pair--left">
-                <i className="cube-eye cube-eye-one" />
-                <i className="cube-eye cube-eye-two" />
-              </span>
-            </b>
-            <b className="cube-face cube-right">
-              <span className="cube-eye-pair cube-eye-pair--right">
-                <i className="cube-eye cube-eye-one" />
-                <i className="cube-eye cube-eye-two" />
-              </span>
-            </b>
-          </i>
-          <i
-            className="tile-cube wrestler-cube wrestler-cube--left-front corner-blue"
-            aria-label="CPU選手コマ"
-            style={{ left: 'calc(50% + 126px)', top: '39px', zIndex: 47 }}
-          >
-            <b className="cube-face cube-top">
-              <i className="cube-front-edge" />
-            </b>
-            <b className="cube-face cube-left">
-              <span className="cube-eye-pair cube-eye-pair--left">
-                <i className="cube-eye cube-eye-one" />
-                <i className="cube-eye cube-eye-two" />
-              </span>
-            </b>
-            <b className="cube-face cube-right">
-              <span className="cube-eye-pair cube-eye-pair--right">
-                <i className="cube-eye cube-eye-one" />
-                <i className="cube-eye cube-eye-two" />
-              </span>
-            </b>
-          </i>
+          <WrestlerCube
+            colorClass="corner-red"
+            facing={rotateFacingWithBoard('left-front', boardRotation)}
+            label="プレイヤー選手コマ"
+            style={boardPosition(playerLocation, boardRotation)}
+          />
+          <WrestlerCube
+            colorClass="corner-blue"
+            facing={rotateFacingWithBoard('left-front', boardRotation)}
+            label="CPU選手コマ"
+            style={boardPosition({ area: 'ring', row: -1, column: 2 }, boardRotation)}
+          />
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
