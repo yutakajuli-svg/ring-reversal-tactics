@@ -24,8 +24,20 @@
 .movement-controls {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 18px 0 -8px;
+}
+
+.facing-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0 -8px;
+  color: #d9e3ef;
+  font: 600 14px/1 "Yu Gothic UI", sans-serif;
 }
 
 .board-rotation-controls {
@@ -36,6 +48,7 @@
 }
 
 .movement-controls button,
+.facing-controls button,
 .board-rotation-controls button {
   min-height: 34px;
   padding: 6px 12px;
@@ -49,6 +62,8 @@
 
 .movement-controls button:hover,
 .movement-controls button.is-active,
+.facing-controls button:hover,
+.facing-controls button.is-active,
 .board-rotation-controls button:hover {
   border-color: #f2bf43;
   color: #f2bf43;
@@ -74,12 +89,20 @@
   position: absolute;
   z-index: 1;
   display: block;
+  padding: 0;
   width: 84px;
   height: 42px;
+  border: 0;
   transform: translateX(-50%);
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   border: 1px solid #9e9788;
   background: #d8cfba;
+  cursor: pointer;
+}
+
+.ringside-tile:focus,
+.tile-cube:focus {
+  outline: none;
 }
 
 .tile-cube {
@@ -87,7 +110,10 @@
   width: 84px;
   height: 84px;
   display: block;
+  padding: 0;
+  border: 0;
   transform: translateX(-50%);
+  cursor: pointer;
 }
 
 .wrestler-cube {
