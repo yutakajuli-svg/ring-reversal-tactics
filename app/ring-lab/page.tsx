@@ -137,12 +137,33 @@ export default function RingLabPage() {
               );
             })}
           </svg>
+          <div
+            className="wrestler-piece wrestler-piece-player"
+            aria-label="プレイヤー選手（仮コマ）"
+            style={{ left: '204px', top: '171px' }}
+          >
+            <span className="piece-shadow" />
+            <span className="piece-base" />
+            <span className="piece-body" />
+            <span className="piece-head" />
+          </div>
+          <div
+            className="wrestler-piece wrestler-piece-cpu"
+            aria-label="CPU選手（仮コマ）"
+            style={{ left: '456px', top: '129px' }}
+          >
+            <span className="piece-shadow" />
+            <span className="piece-base" />
+            <span className="piece-body" />
+            <span className="piece-head" />
+          </div>
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
                 <path className="rope rope-far" d="M372 24 L624 150">
                   <animate
                     attributeName="d"
+                    begin="indefinite"
                     dur="1.2s"
                     calcMode="discrete"
                     keyTimes="0;.5"
@@ -153,6 +174,7 @@ export default function RingLabPage() {
                 <path className="rope rope-far" d="M36 150 L288 24">
                   <animate
                     attributeName="d"
+                    begin="indefinite"
                     dur="1.2s"
                     calcMode="discrete"
                     keyTimes="0;.5"
@@ -169,6 +191,7 @@ export default function RingLabPage() {
                 <path className="rope rope-rebound" d="M36 150 L330 297">
                   <animate
                     attributeName="d"
+                    begin="indefinite"
                     dur="1.2s"
                     calcMode="discrete"
                     keyTimes="0;.5"
@@ -179,6 +202,7 @@ export default function RingLabPage() {
                 <path className="rope rope-rebound" d="M330 297 L624 150">
                   <animate
                     attributeName="d"
+                    begin="indefinite"
                     dur="1.2s"
                     calcMode="discrete"
                     keyTimes="0;.5"
