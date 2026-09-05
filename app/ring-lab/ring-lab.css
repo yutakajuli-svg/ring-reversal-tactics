@@ -146,6 +146,77 @@
   stroke-linecap: butt;
 }
 
+.wrestler-piece {
+  position: absolute;
+  z-index: 47;
+  width: 62px;
+  height: 80px;
+  transform: translate(-50%, -100%);
+  font-family: "Yu Gothic UI", sans-serif;
+}
+
+.wrestler-piece span {
+  position: absolute;
+  display: block;
+}
+
+.piece-shadow {
+  right: 2px;
+  bottom: 0;
+  left: 2px;
+  height: 17px;
+  border-radius: 50%;
+  background: #080b1880;
+  filter: blur(2px);
+}
+
+.piece-base {
+  right: 12px;
+  bottom: 5px;
+  left: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #fff8;
+  box-shadow: inset 0 -5px 0 #0003, 0 3px 2px #05070a80;
+}
+
+.piece-body {
+  right: 12px;
+  bottom: 13px;
+  left: 12px;
+  height: 26px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 2px 1px #05070a70);
+}
+
+.piece-head {
+  right: 14px;
+  bottom: 34px;
+  left: 14px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #fff8;
+  box-shadow: inset 6px 5px 6px #ffffff6b, inset -7px -7px 7px #0004, 0 2px 1px #05070a70;
+}
+
+.wrestler-piece-player .piece-base,
+.wrestler-piece-player .piece-body {
+  background: linear-gradient(90deg, #7b1730, #e04b63 45%, #8f1d38);
+}
+
+.wrestler-piece-player .piece-head {
+  background: linear-gradient(135deg, #ffb2a9, #d76565 55%, #7c2938);
+}
+
+.wrestler-piece-cpu .piece-base,
+.wrestler-piece-cpu .piece-body {
+  background: linear-gradient(90deg, #123f78, #3d9adb 45%, #1a528e);
+}
+
+.wrestler-piece-cpu .piece-head {
+  background: linear-gradient(135deg, #b8e6ff, #67abd5 55%, #1c5288);
+}
+
 .rope-layer {
   position: absolute;
   z-index: 30;
