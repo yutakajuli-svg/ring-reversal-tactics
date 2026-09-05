@@ -69,11 +69,18 @@ const HIDDEN_RINGSIDE_DESTINATION: BoardLocation = {
   column: 1,
 };
 
-// Each wrestler has a world cell, height and facing. Shapes can change later,
-// but this board attachment is shared by every piece.
-const CPU_LOCATION: BoardLocation = { area: 'ring', row: 0, column: 3 };
+type WrestlerId = 'red' | 'blue';
+type WrestlerState = { location: BoardLocation; facing: RingSide };
 
-type BoardRotation = 0 | 1 | 2 | 3;
+const INITIAL_WRESTLERS: Record<WrestlerId, WrestlerState> = {
+  red: { location: TOKEN_DESTINATIONS.ring, facing: 'left-front' },
+  blue: { location: { area: 'ring', row: 0, column: 3 }, facing: 'left-front' },
+};
+
+// There are only two camera views: the normal view and its 180° opposite.
+// Keeping this to a half-turn prevents the board from ever entering a
+// diagonal 90° view that is not used by the game.
+type BoardRotation = 0 | 2;
 
 function rotateCell(row: number, column: number, size: number, rotation: BoardRotation) {
   let rotatedRow = row;
@@ -109,6 +116,15 @@ function boardPosition(location: BoardLocation, rotation: BoardRotation) {
 
 function rotateFacingWithBoard(facing: RingSide, rotation: BoardRotation): RingSide {
   return TURN_ORDER[(TURN_ORDER.indexOf(facing) + rotation) % TURN_ORDER.length];
+}
+
+function preferredBoardRotation(location: BoardLocation): BoardRotation {
+  // The far outer edge is hidden by the ring. Flip only when the active
+  // wrestler occupies that edge; the world cell itself never changes.
+  if (location.area === 'ringside' && location.row + location.column < SIZE - 1) {
+    return 2;
+  }
+  return 0;
 }
 
 function rotateSurface(facing: RingSide, surface: CubeSurface): RingSide | 'top' | 'bottom' {
@@ -178,70 +194,88 @@ function WrestlerCube({
 }
 
 export default function RingLabPage() {
-  const [playerLocation, setPlayerLocation] = useState<BoardLocation>(TOKEN_DESTINATIONS.ring);
+  const [wrestlers, setWrestlers] = useState<Record<WrestlerId, WrestlerState>>(INITIAL_WRESTLERS);
+  const [activeWrestler, setActiveWrestler] = useState<WrestlerId>('red');
   const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
 
-  const turnBoard = (direction: 1 | -1) => {
-    setBoardRotation((current) => ((current + direction + 4) % 4) as BoardRotation);
+  const flipBoard = () => {
+    setBoardRotation((current) => (current === 0 ? 2 : 0));
   };
 
-  const movePlayer = (location: BoardLocation, keepVisible = false) => {
-    setPlayerLocation(location);
+  const focusWrestler = (id: WrestlerId) => {
+    setActiveWrestler(id);
+    setBoardRotation(preferredBoardRotation(wrestlers[id].location));
+  };
 
-    // A hidden ringside move flips the board 180°. The two colored corners
-    // swap to the front, and the piece's world cell stays exactly the same.
-    if (keepVisible) {
-      setBoardRotation((current) => ((current + 2) % 4) as BoardRotation);
-    }
+  const moveActiveWrestler = (location: BoardLocation) => {
+    setWrestlers((current) => ({
+      ...current,
+      [activeWrestler]: { ...current[activeWrestler], location },
+    }));
+    setBoardRotation(preferredBoardRotation(location));
+  };
+
+  const setActiveFacing = (facing: RingSide) => {
+    setWrestlers((current) => ({
+      ...current,
+      [activeWrestler]: { ...current[activeWrestler], facing },
+    }));
   };
 
   return (
     <main className="ring-lab">
       <p>RING SHAPE STUDY</p>
       <h1>7 × 7 CUBES</h1>
-      <div className="movement-controls" aria-label="選手コマの移動テスト">
+      <div className="movement-controls" aria-label="行動する選手コマ">
         <button
-          className={playerLocation.area === 'ring' ? 'is-active' : undefined}
-          onClick={() => movePlayer(TOKEN_DESTINATIONS.ring)}
+          className={activeWrestler === 'red' ? 'is-active' : undefined}
+          onClick={() => focusWrestler('red')}
           type="button"
         >
-          リング上
+          赤コマを行動させる
         </button>
         <button
-          className={playerLocation.area === 'corner' ? 'is-active' : undefined}
-          onClick={() => movePlayer(TOKEN_DESTINATIONS.corner)}
+          className={activeWrestler === 'blue' ? 'is-active' : undefined}
+          onClick={() => focusWrestler('blue')}
           type="button"
         >
-          コーナー上
-        </button>
-        <button
-          className={playerLocation.area === 'ringside' ? 'is-active' : undefined}
-          onClick={() => movePlayer(TOKEN_DESTINATIONS.ringside)}
-          type="button"
-        >
-          場外
-        </button>
-        <button onClick={() => movePlayer(HIDDEN_RINGSIDE_DESTINATION, true)} type="button">
-          奥側へ場外
+          青コマを行動させる
         </button>
       </div>
+      <div className="facing-controls" aria-label="行動するコマの向き">
+        <span>向き：</span>
+        {([
+          ['left-front', '左手前ロープ'],
+          ['right-front', '右手前ロープ'],
+          ['right-back', '右奥ロープ'],
+          ['left-back', '左奥ロープ'],
+        ] as const).map(([facing, label]) => (
+          <button
+            className={wrestlers[activeWrestler].facing === facing ? 'is-active' : undefined}
+            key={facing}
+            onClick={() => setActiveFacing(facing)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="board-rotation-controls" aria-label="盤面の回転テスト">
-        <button onClick={() => turnBoard(-1)} type="button">
-          盤面 ↶
-        </button>
-        <button onClick={() => turnBoard(1)} type="button">
-          盤面 ↷
+        <button onClick={flipBoard} type="button">
+          盤面を180°反転
         </button>
       </div>
       <div className="cube-study" aria-label="立方体を七マスずつ並べたリングの土台">
-        <div className="cube-board" aria-hidden="true">
+        <div className="cube-board">
           {ringsideTiles.map(({ r, c }) => (
             (() => {
               const rotated = rotateCell(r, c, RINGSIDE_SIZE, boardRotation);
               return (
-                <i
+                <button
                   className="ringside-tile"
                   key={`ringside-${r}-${c}`}
+                  aria-label={`場外 ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
+                  onClick={() => moveActiveWrestler({ area: 'ringside', row: r - 1, column: c - 1 })}
                   style={{
                     left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                     top: `${18 + (rotated.row + rotated.column) * 21}px`,
@@ -286,9 +320,11 @@ export default function RingLabPage() {
             (() => {
               const rotated = rotateWorldCell(r, c, boardRotation);
               return (
-                <i
+                <button
                   className="tile-cube"
                   key={`${r}-${c}`}
+                  aria-label={`リング ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
+                  onClick={() => moveActiveWrestler({ area: 'ring', row: r, column: c })}
                   style={{
                     left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                     top: `${18 + (rotated.row + rotated.column) * 21}px`,
@@ -298,7 +334,7 @@ export default function RingLabPage() {
                   <b className="cube-face cube-top" />
                   <b className="cube-face cube-left" />
                   <b className="cube-face cube-right" />
-                </i>
+                </button>
               );
             })()
           ))}
@@ -312,9 +348,11 @@ export default function RingLabPage() {
 
             const rotated = rotateWorldCell(r, c, boardRotation);
             return (
-            <i
+            <button
               className={`tile-cube corner-cube ${colorClass}`}
               key={`corner-${r}-${c}`}
+              aria-label="コーナー上へ移動"
+              onClick={() => moveActiveWrestler({ area: 'corner', row: r, column: c })}
               style={{
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                 top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
@@ -324,7 +362,7 @@ export default function RingLabPage() {
               <b className="cube-face cube-top" />
               <b className="cube-face cube-left" />
               <b className="cube-face cube-right" />
-            </i>
+            </button>
             );
           })}
           <svg className="grid-layer" viewBox="0 0 660 420" preserveAspectRatio="none">
@@ -361,15 +399,15 @@ export default function RingLabPage() {
           </svg>
           <WrestlerCube
             colorClass="corner-red"
-            facing={rotateFacingWithBoard('left-front', boardRotation)}
+            facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}
             label="プレイヤー選手コマ"
-            style={boardPosition(playerLocation, boardRotation)}
+            style={boardPosition(wrestlers.red.location, boardRotation)}
           />
           <WrestlerCube
             colorClass="corner-blue"
-            facing={rotateFacingWithBoard('left-front', boardRotation)}
+            facing={rotateFacingWithBoard(wrestlers.blue.facing, boardRotation)}
             label="CPU選手コマ"
-            style={boardPosition(CPU_LOCATION, boardRotation)}
+            style={boardPosition(wrestlers.blue.location, boardRotation)}
           />
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
