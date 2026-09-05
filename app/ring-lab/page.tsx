@@ -138,7 +138,7 @@ export default function RingLabPage() {
             })}
           </svg>
           <i
-            className="tile-cube wrestler-cube wrestler-cube--right-back corner-red"
+            className="tile-cube wrestler-cube wrestler-cube--left-front corner-red"
             aria-label="プレイヤー選手コマ"
             style={{ left: 'calc(50% - 126px)', top: '81px', zIndex: 47 }}
           >
@@ -159,7 +159,7 @@ export default function RingLabPage() {
             </b>
           </i>
           <i
-            className="tile-cube wrestler-cube wrestler-cube--right-back corner-blue"
+            className="tile-cube wrestler-cube wrestler-cube--left-front corner-blue"
             aria-label="CPU選手コマ"
             style={{ left: 'calc(50% + 126px)', top: '39px', zIndex: 47 }}
           >
