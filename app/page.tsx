@@ -10,6 +10,7 @@ type IntentKind = 'advance' | 'strike' | 'rebound';
 type Intent = { kind: IntentKind; path: Pos[]; attack?: Pos; facing: Facing };
 
 const SIZE = 7;
+const ASSET_BASE = process.env.GITHUB_ACTIONS === 'true' ? '/ring-reversal-tactics' : '';
 const DIRS: Record<Facing, Pos> = { N: { r: -1, c: 0 }, E: { r: 0, c: 1 }, S: { r: 1, c: 0 }, W: { r: 0, c: -1 } };
 // The ring is drawn in isometric projection. Keep every facing arrow aligned
 // with the highlighted front tile on that projected board.
@@ -221,8 +222,8 @@ export default function Home() {
         <div className="fighter-card cpu-card"><div><span>CPU</span><strong>RED CORNER</strong></div><div className="hit-pips" aria-label={`成功打撃 ${hits.cpu}/3`}>{[0,1,2].map((n)=><i key={n} className={n<hits.cpu?'on':''}/>)}</div></div>
       </section>
       <div className="game-grid">
-        <section className="intent-panel panel"><p className="panel-kicker">CPU PLAN</p><h2>{intentName}</h2><div className={`intent-symbol ${intent.kind}`} aria-hidden="true">{intent.kind==='rebound'?'⇠⇠⇠':intent.attack?'➜ ✦':'➜'}</div><p>{intent.kind==='rebound'?'ロープ反動で3マス直進':intent.attack?'表示ルートを移動後、赤いマスへ打撃':'PLAYERへ最大2マス接近'}</p><dl><div><dt>移動</dt><dd>{intent.path.length} マス</dd></div><div><dt>向き</dt><dd>{FACE_NAME[intent.facing]} {FACE_LABEL[intent.facing]}</dd></div></dl>{!moved&&<div className="turn-choice"><span>緑のマスを選ぶ<br/>動かないなら</span><button onClick={() => { setMoved(true); setFacingSet(false); setMessage('その場に留まりました。次に正面の黄色マスを選びます。'); }}>移動しない</button></div>}</section>
-        <section className="ring-wrap" aria-label="7×7リング"><div className="ring-back-rope" aria-hidden="true"/><div className="board">
+        <section className="next-panel panel" aria-label="CPUの次の行動"><p className="panel-kicker">NEXT</p><div className={`next-sprite ${intent.kind}`} style={{ backgroundImage: `url(${ASSET_BASE}/assets/next-action-wrestlers.png)` }} aria-hidden="true"/><strong>{intent.kind==='rebound'?'REBOUND':intent.kind==='strike'?'STRIKE':'MOVE'}</strong>{!moved&&<button className="stay-button" onClick={() => { setMoved(true); setFacingSet(false); setMessage('その場に留まりました。次に正面の黄色マスを選びます。'); }}>移動しない</button>}</section>
+        <section className="ring-wrap" aria-label="7×7リング"><div className="ring-back-rope" aria-hidden="true"/><i className="corner-post post-nw" aria-hidden="true"/><i className="corner-post post-ne" aria-hidden="true"/><i className="corner-post post-sw" aria-hidden="true"/><i className="corner-post post-se" aria-hidden="true"/><div className="board">
           {cells.map((cell)=>{const key=`${cell.r},${cell.c}`, isReachable=reachable.some((p)=>same(p,cell)); const cls=['tile',isReachable?'reachable':'',moved&&frontKey===key?'front-tile':'',pathSet.has(key)?'intent-path':'',attackKey===key?'attack-tile':'',reboundSet.has(key)?'rebound-tile':'',reservedStrike&&same(reservedStrike,cell)?'reserved':''].filter(Boolean).join(' '); return <button key={key} className={cls} style={projected(cell)} onClick={()=>movePlayer(cell)} aria-label={`${cell.r+1}行${cell.c+1}列${isReachable?'へ移動':''}`} disabled={!isReachable}/>})}
           <div className="token player-token" style={projected(player)}><span className="face-arrow">{FACE_LABEL[playerFacing]}</span><b>P</b><small>PLAYER</small></div>
           <div className="token cpu-token" style={projected(cpu)}><span className="face-arrow">{FACE_LABEL[cpuFacing]}</span><b>C</b><small>CPU</small></div>
