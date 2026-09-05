@@ -160,12 +160,12 @@
 
 .wrestler-cube .cube-left .cube-eye-one {
   top: 43px;
-  left: 18px;
+  left: 16px;
 }
 
 .wrestler-cube .cube-left .cube-eye-two {
   top: 48px;
-  left: 29px;
+  left: 27px;
 }
 
 .wrestler-cube .cube-eye-pair--right {
@@ -179,10 +179,29 @@
   opacity: 0;
 }
 
+/* When facing the left-front rope, the marker and eyes share the left face. */
+.wrestler-cube--left-front .cube-eye-pair--right {
+  opacity: 0;
+}
+
+.wrestler-cube--left-front .cube-eye-pair--left {
+  opacity: 1;
+}
+
 /* The highlighted top edge is the border of the face looking at the right-back rope. */
 .wrestler-cube--right-back .cube-front-edge {
   top: 2px;
   left: 40px;
+  display: block;
+  width: 42px;
+  transform: rotate(26.565deg);
+  transform-origin: left center;
+}
+
+/* The lower-left top edge is the border facing the left-front rope. */
+.wrestler-cube--left-front .cube-front-edge {
+  top: 20px;
+  left: 0;
   display: block;
   width: 42px;
   transform: rotate(26.565deg);
