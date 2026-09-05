@@ -199,6 +199,113 @@
   box-shadow: inset 6px 5px 6px #ffffff6b, inset -7px -7px 7px #0004, 0 2px 1px #05070a70;
 }
 
+.piece-eye {
+  z-index: 2;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #12151d;
+  box-shadow: 0 1px 0 #ffffff45;
+}
+
+.wrestler-piece--face-study {
+  height: 43px;
+}
+
+.wrestler-piece--face-study .piece-base,
+.wrestler-piece--face-study .piece-body {
+  display: none;
+}
+
+.wrestler-piece--face-study .piece-shadow {
+  display: none;
+}
+
+.wrestler-piece--face-study .piece-head {
+  bottom: 5px;
+}
+
+/* Two dots stay visible, but their placement is the facing indicator. */
+.face-front .piece-eye-one {
+  bottom: 49px;
+  left: 21px;
+}
+
+.face-front .piece-eye-two {
+  bottom: 49px;
+  left: 35px;
+}
+
+.face-back .piece-eye-one {
+  bottom: 61px;
+  left: 21px;
+}
+
+.face-back .piece-eye-two {
+  bottom: 61px;
+  left: 35px;
+}
+
+.face-right .piece-eye-one {
+  right: 16px;
+  bottom: 56px;
+}
+
+.face-right .piece-eye-two {
+  right: 16px;
+  bottom: 45px;
+}
+
+.face-left .piece-eye-one {
+  bottom: 56px;
+  left: 16px;
+}
+
+.face-left .piece-eye-two {
+  bottom: 45px;
+  left: 16px;
+}
+
+.wrestler-piece--face-study.face-front .piece-eye-one {
+  bottom: 17px;
+  left: 21px;
+}
+
+.wrestler-piece--face-study.face-front .piece-eye-two {
+  bottom: 17px;
+  left: 35px;
+}
+
+.wrestler-piece--face-study.face-back .piece-eye-one {
+  bottom: 29px;
+  left: 21px;
+}
+
+.wrestler-piece--face-study.face-back .piece-eye-two {
+  bottom: 29px;
+  left: 35px;
+}
+
+.wrestler-piece--face-study.face-right .piece-eye-one {
+  right: 16px;
+  bottom: 19px;
+}
+
+.wrestler-piece--face-study.face-right .piece-eye-two {
+  right: 25px;
+  bottom: 19px;
+}
+
+.wrestler-piece--face-study.face-left .piece-eye-one {
+  bottom: 19px;
+  left: 16px;
+}
+
+.wrestler-piece--face-study.face-left .piece-eye-two {
+  bottom: 19px;
+  left: 25px;
+}
+
 .wrestler-piece-player .piece-base,
 .wrestler-piece-player .piece-body {
   background: linear-gradient(90deg, #7b1730, #e04b63 45%, #8f1d38);
