@@ -571,6 +571,18 @@
   background: #8a6bd0;
 }
 
+.atlas-post .atlas-grid i.atlas-post-red {
+  background: #b93247;
+}
+
+.atlas-post .atlas-grid i.atlas-post-blue {
+  background: #2674b3;
+}
+
+.atlas-post .atlas-grid i.atlas-post-neutral {
+  background: #697684;
+}
+
 .atlas-ring .atlas-grid i:empty,
 .atlas-post .atlas-grid i:empty {
   background: #0a1322;
