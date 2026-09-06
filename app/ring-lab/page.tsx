@@ -114,13 +114,6 @@ function boardPosition(location: BoardLocation, rotation: BoardRotation) {
   // Ring cells begin at 18; the 9×9 ringside floor is one rendered level lower.
   const floorTop = (location.area === 'ringside' ? 60 : 18) + (row + column) * 21;
   const standingLevels = location.area === 'corner' ? 2 : 1;
-  // A ring cell directly below a post is still a valid cell. Draw its piece
-  // one visual half-step lower so the post naturally masks the upper half,
-  // instead of deleting the destination or stacking the piece on the post.
-  const postShadowOffset = location.area === 'ring' && isCornerCell(location.row, location.column)
-    ? 42
-    : 0;
-
   const depth = row + column;
   // This order follows physical spaces, rather than the cube's own height.
   // A ring piece stays inside the ropes; an outer near-side piece is outside
@@ -133,22 +126,43 @@ function boardPosition(location: BoardLocation, rotation: BoardRotation) {
 
   return {
     left: `calc(50% + ${(column - row) * 42}px)`,
-    top: `${floorTop - standingLevels * 42 + postShadowOffset}px`,
+    top: `${floorTop - standingLevels * 42}px`,
     zIndex,
   };
 }
 
-function rotateFacingWithBoard(facing: RingSide, rotation: BoardRotation): RingSide {
-  return TURN_ORDER[(TURN_ORDER.indexOf(facing) + rotation) % TURN_ORDER.length];
+function isSameLocation(left: BoardLocation, right: BoardLocation) {
+  return left.area === right.area && left.row === right.row && left.column === right.column;
 }
 
-function preferredBoardRotation(location: BoardLocation): BoardRotation {
-  // The far outer edge is hidden by the ring. Flip only when the active
-  // wrestler occupies that edge; the world cell itself never changes.
-  if (location.area === 'ringside' && location.row + location.column < SIZE - 1) {
-    return 2;
-  }
-  return 0;
+function isDefaultHiddenRingside(location: BoardLocation) {
+  return location.area === 'ringside' && (
+    (location.column === -1 && location.row >= -1 && location.row <= 6)
+    || (location.row === -1 && location.column >= 0 && location.column <= 6)
+  );
+}
+
+function isRotatedHiddenRingside(location: BoardLocation) {
+  return location.area === 'ringside' && (
+    (location.column === 7 && location.row >= 0 && location.row <= 7)
+    || (location.row === 7 && location.column >= 0 && location.column <= 7)
+  );
+}
+
+function rotationAfterMove(current: BoardRotation, location: BoardLocation): BoardRotation {
+  if (current === 0 && isDefaultHiddenRingside(location)) return 2;
+  if (current === 2 && isRotatedHiddenRingside(location)) return 0;
+  return current;
+}
+
+function isTransparentCorner(row: number, column: number, rotation: BoardRotation) {
+  return rotation === 0
+    ? row === SIZE - 1 && column === SIZE - 1
+    : row === 0 && column === 0;
+}
+
+function rotateFacingWithBoard(facing: RingSide, rotation: BoardRotation): RingSide {
+  return TURN_ORDER[(TURN_ORDER.indexOf(facing) + rotation) % TURN_ORDER.length];
 }
 
 function rotateSurface(facing: RingSide, surface: CubeSurface): RingSide | 'top' | 'bottom' {
@@ -188,11 +202,13 @@ function WrestlerCube({
   facing,
   label,
   style,
+  translucent = false,
 }: {
   colorClass: 'corner-red' | 'corner-blue';
   facing: RingSide;
   label: string;
   style: { left: string; top: string; zIndex: number };
+  translucent?: boolean;
 }) {
   // Eyes and the gold edge are one decal glued to the token's physical front.
   const frontSurface = rotateSurface(facing, 'front');
@@ -203,7 +219,7 @@ function WrestlerCube({
     .filter((point): point is { x: number; y: number } => point !== null);
 
   return (
-    <i className={`tile-cube wrestler-cube ${colorClass}`} aria-label={label} style={style}>
+    <i className={`tile-cube wrestler-cube ${colorClass}${translucent ? ' is-translucent' : ''}`} aria-label={label} style={style}>
       <b className="cube-face cube-top" />
       <b className="cube-face cube-left" />
       <b className="cube-face cube-right" />
@@ -229,17 +245,17 @@ export default function RingLabPage() {
     setBoardRotation((current) => (current === 0 ? 2 : 0));
   };
 
-  const focusWrestler = (id: WrestlerId) => {
-    setActiveWrestler(id);
-    setBoardRotation(preferredBoardRotation(wrestlers[id].location));
-  };
+  const focusWrestler = (id: WrestlerId) => setActiveWrestler(id);
 
   const moveActiveWrestler = (location: BoardLocation) => {
+    const otherWrestler: WrestlerId = activeWrestler === 'red' ? 'blue' : 'red';
+    if (isSameLocation(location, wrestlers[otherWrestler].location)) return;
+
     setWrestlers((current) => ({
       ...current,
       [activeWrestler]: { ...current[activeWrestler], location },
     }));
-    setBoardRotation(preferredBoardRotation(location));
+    setBoardRotation((current) => rotationAfterMove(current, location));
   };
 
   const setActiveFacing = (facing: RingSide) => {
@@ -336,6 +352,7 @@ export default function RingLabPage() {
         <div className="cube-board">
           {ringsideTiles.map(({ r, c }) => (
             (() => {
+              const location: BoardLocation = { area: 'ringside', row: r - 1, column: c - 1 };
               const rotated = rotateCell(r, c, RINGSIDE_SIZE, boardRotation);
               const style = {
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
@@ -353,7 +370,8 @@ export default function RingLabPage() {
                   className="ringside-tile"
                   key={`ringside-${r}-${c}`}
                   aria-label={`場外 ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
-                  onClick={() => moveActiveWrestler({ area: 'ringside', row: r - 1, column: c - 1 })}
+                  disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
+                  onClick={() => moveActiveWrestler(location)}
                   style={style}
                 />
               );
@@ -393,13 +411,18 @@ export default function RingLabPage() {
           </svg>
           {cubes.map(({ r, c }) => (
             (() => {
+              const location: BoardLocation = { area: 'ring', row: r, column: c };
+              const isBlocked = isCornerCell(r, c)
+                || isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location);
               const rotated = rotateWorldCell(r, c, boardRotation);
               return (
                 <button
                   className="tile-cube"
                   key={`${r}-${c}`}
                   aria-label={`リング ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
-                  onClick={() => moveActiveWrestler({ area: 'ring', row: r, column: c })}
+                  aria-disabled={isBlocked}
+                  disabled={isBlocked}
+                  onClick={() => moveActiveWrestler(location)}
                   style={{
                     left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                     top: `${18 + (rotated.row + rotated.column) * 21}px`,
@@ -414,6 +437,7 @@ export default function RingLabPage() {
             })()
           ))}
           {corners.map(({ r, c }) => {
+            const location: BoardLocation = { area: 'corner', row: r, column: c };
             const colorClass =
               r === SIZE - 1 && c === 0
                 ? 'corner-red'
@@ -424,10 +448,11 @@ export default function RingLabPage() {
             const rotated = rotateWorldCell(r, c, boardRotation);
             return (
             <button
-              className={`tile-cube corner-cube ${colorClass}`}
+              className={`tile-cube corner-cube ${colorClass}${isTransparentCorner(r, c, boardRotation) ? ' is-translucent' : ''}`}
               key={`corner-${r}-${c}`}
               aria-label="コーナー上へ移動"
-              onClick={() => moveActiveWrestler({ area: 'corner', row: r, column: c })}
+              disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
+              onClick={() => moveActiveWrestler(location)}
               style={{
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                 top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
@@ -477,12 +502,20 @@ export default function RingLabPage() {
             facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}
             label="プレイヤー選手コマ"
             style={boardPosition(wrestlers.red.location, boardRotation)}
+            translucent={
+              wrestlers.red.location.area === 'corner'
+              && isTransparentCorner(wrestlers.red.location.row, wrestlers.red.location.column, boardRotation)
+            }
           />
           <WrestlerCube
             colorClass="corner-blue"
             facing={rotateFacingWithBoard(wrestlers.blue.facing, boardRotation)}
             label="CPU選手コマ"
             style={boardPosition(wrestlers.blue.location, boardRotation)}
+            translucent={
+              wrestlers.blue.location.area === 'corner'
+              && isTransparentCorner(wrestlers.blue.location.row, wrestlers.blue.location.column, boardRotation)
+            }
           />
           {/* The ring's near apron is a separate visual surface. It can cover
               only the lower part of a piece at the edge without making that
