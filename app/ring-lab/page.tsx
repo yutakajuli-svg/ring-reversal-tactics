@@ -24,7 +24,6 @@ const corners = [
 function isCornerCell(row: number, column: number) {
   return corners.some((corner) => corner.r === row && corner.c === column);
 }
-
 function isRingsidePerimeter(row: number, column: number) {
   return row === 0 || column === 0 || row === RINGSIDE_SIZE - 1 || column === RINGSIDE_SIZE - 1;
 }
@@ -224,6 +223,7 @@ export default function RingLabPage() {
   const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
   const [showVisibilityMap, setShowVisibilityMap] = useState(false);
   const [visibilityMarks, setVisibilityMarks] = useState<Record<string, VisibilityMark>>({});
+  const [showCoordinateAtlas, setShowCoordinateAtlas] = useState(false);
 
   const flipBoard = () => {
     setBoardRotation((current) => (current === 0 ? 2 : 0));
@@ -324,6 +324,13 @@ export default function RingLabPage() {
             <button onClick={() => setVisibilityMarks({})} type="button">色を消す</button>
           </>
         )}
+        <button
+          className={showCoordinateAtlas ? 'is-active' : undefined}
+          onClick={() => setShowCoordinateAtlas((current) => !current)}
+          type="button"
+        >
+          {showCoordinateAtlas ? '3D座標見取り図を隠す' : '3D座標見取り図を表示'}
+        </button>
       </div>
       <div className="cube-study" aria-label="立方体を七マスずつ並べたリングの土台">
         <div className="cube-board">
@@ -602,6 +609,49 @@ export default function RingLabPage() {
           )}
         </div>
       </div>
+      {showCoordinateAtlas && (
+        <section className="coordinate-atlas" aria-labelledby="coordinate-atlas-title">
+          <h2 id="coordinate-atlas-title">3D座標見取り図</h2>
+          <p>同じ画面位置に重なって見えても、ここでは高さごとに分けて確認します。</p>
+          <div className="atlas-layers">
+            <article className="atlas-layer atlas-mat">
+              <h3>高さ 0　場外マット</h3>
+              <div className="atlas-grid atlas-grid-9">
+                {ringsideTiles.map(({ r, c }) => (
+                  <i key={`atlas-mat-${r}-${c}`}>{String.fromCharCode(65 + c)}{r + 1}</i>
+                ))}
+              </div>
+            </article>
+            <article className="atlas-layer atlas-ring">
+              <h3>高さ 1　リング天面</h3>
+              <div className="atlas-grid atlas-grid-9">
+                {cubes.map(({ r, c }) => (
+                  <i
+                    key={`atlas-ring-${r}-${c}`}
+                    style={{ gridColumn: c + 2, gridRow: r + 2 }}
+                  >
+                    {String.fromCharCode(66 + c)}{r + 2}
+                  </i>
+                ))}
+              </div>
+            </article>
+            <article className="atlas-layer atlas-post">
+              <h3>高さ 2　コーナー天面</h3>
+              <div className="atlas-grid atlas-grid-9">
+                {corners.map(({ r, c }) => (
+                  <i
+                    key={`atlas-post-${r}-${c}`}
+                    style={{ gridColumn: c + 2, gridRow: r + 2 }}
+                  >
+                    {String.fromCharCode(66 + c)}{r + 2}
+                  </i>
+                ))}
+              </div>
+            </article>
+          </div>
+          <p className="atlas-note">この3枚は重なりを外した見取り図です。実際の画面では、別の住所でも投影によって重なって見えることがあります。</p>
+        </section>
+      )}
     </main>
   );
 }
