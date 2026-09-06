@@ -125,6 +125,18 @@
     top 280ms cubic-bezier(.22, .8, .25, 1);
 }
 
+/* Only the near outer faces of the ring sit in front of an edge piece.
+   The surface is separate from its logical cell, so it never affects clicks. */
+.ring-apron {
+  position: absolute;
+  z-index: 50;
+  display: block;
+  width: 84px;
+  height: 84px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
 .ringside-grid-layer {
   position: absolute;
   z-index: 2;
