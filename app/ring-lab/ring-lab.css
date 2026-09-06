@@ -117,7 +117,12 @@
 }
 
 .wrestler-cube {
-  transition: left 180ms ease-out, top 180ms ease-out;
+  /* Every board cell uses the same foot position, so one shared transition
+     keeps diagonal moves and the ring-to-ringside step equally smooth. */
+  will-change: left, top;
+  transition:
+    left 280ms cubic-bezier(.22, .8, .25, 1),
+    top 280ms cubic-bezier(.22, .8, .25, 1);
 }
 
 .ringside-grid-layer {
