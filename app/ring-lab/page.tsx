@@ -466,13 +466,55 @@ export default function RingLabPage() {
                 top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
                 // The foreground transparent post is a visual window, not a
                 // solid layer. A ring wrestler behind it must stay whole.
-                zIndex: (translucent ? 36 : 40) + (rotated.row + rotated.column),
+                zIndex: (translucent ? 30 : 40) + (rotated.row + rotated.column),
               }}
             >
               <b className="cube-face cube-top" />
               <b className="cube-face cube-left" />
               <b className="cube-face cube-right" />
             </button>
+            );
+          })}
+          {/* A height-1 corner is not a destination. Its visible top face is
+              the in-board control for the height-2 post directly above it.
+              Keeping this hit surface separate leaves the projected G7 ring
+              top selectable even where it overlaps the H8 post top. */}
+          {corners.map(({ r, c }) => {
+            const cornerLocation: BoardLocation = { area: 'corner', row: r, column: c };
+            const ringLocation: BoardLocation = { area: 'ring', row: r, column: c };
+            const rotated = rotateWorldCell(r, c, boardRotation);
+            const otherLocation = wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location;
+            return (
+              <button
+                aria-label={`高さ1 ${String.fromCharCode(66 + c)}${r + 2}：コーナー天面へ移動`}
+                className="corner-access-target"
+                disabled={isSameLocation(cornerLocation, otherLocation) || isSameLocation(ringLocation, otherLocation)}
+                key={`corner-access-${r}-${c}`}
+                onClick={() => moveActiveWrestler(cornerLocation)}
+                style={{
+                  left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                  top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                }}
+                type="button"
+              />
+            );
+          })}
+          {cubes.filter(({ r, c }) => !isCornerCell(r, c)).map(({ r, c }) => {
+            const location: BoardLocation = { area: 'ring', row: r, column: c };
+            const rotated = rotateWorldCell(r, c, boardRotation);
+            return (
+              <button
+                aria-label={`リング ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
+                className="ring-access-target"
+                disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
+                key={`ring-access-${r}-${c}`}
+                onClick={() => moveActiveWrestler(location)}
+                style={{
+                  left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                  top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                }}
+                type="button"
+              />
             );
           })}
           <svg className="grid-layer" viewBox="0 0 660 420" preserveAspectRatio="none">
