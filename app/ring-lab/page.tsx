@@ -29,10 +29,6 @@ function isRingsidePerimeter(row: number, column: number) {
   return row === 0 || column === 0 || row === RINGSIDE_SIZE - 1 || column === RINGSIDE_SIZE - 1;
 }
 
-const frontApronCells = cubes.filter(({ r, c }) =>
-  (r === SIZE - 1 || c === SIZE - 1) && !isCornerCell(r, c),
-);
-
 const TURN_ORDER = ['right-front', 'right-back', 'left-back', 'left-front'] as const;
 type RingSide = (typeof TURN_ORDER)[number];
 type CubeSurface = 'front' | 'right' | 'back' | 'left' | 'top' | 'bottom';
@@ -83,6 +79,7 @@ const HIDDEN_RINGSIDE_DESTINATION: BoardLocation = {
 
 type WrestlerId = 'red' | 'blue';
 type WrestlerState = { location: BoardLocation; facing: RingSide };
+type VisibilityMark = 'visible' | 'hidden' | 'corner-shadow';
 
 const INITIAL_WRESTLERS: Record<WrestlerId, WrestlerState> = {
   red: { location: TOKEN_DESTINATIONS.ring, facing: 'left-front' },
@@ -225,6 +222,8 @@ export default function RingLabPage() {
   const [wrestlers, setWrestlers] = useState<Record<WrestlerId, WrestlerState>>(INITIAL_WRESTLERS);
   const [activeWrestler, setActiveWrestler] = useState<WrestlerId>('red');
   const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
+  const [showVisibilityMap, setShowVisibilityMap] = useState(false);
+  const [visibilityMarks, setVisibilityMarks] = useState<Record<string, VisibilityMark>>({});
 
   const flipBoard = () => {
     setBoardRotation((current) => (current === 0 ? 2 : 0));
@@ -248,6 +247,24 @@ export default function RingLabPage() {
       ...current,
       [activeWrestler]: { ...current[activeWrestler], facing },
     }));
+  };
+
+  const cycleVisibilityMark = (key: string) => {
+    const next: Record<VisibilityMark | 'clear', VisibilityMark | undefined> = {
+      clear: 'visible',
+      visible: 'hidden',
+      hidden: 'corner-shadow',
+      'corner-shadow': undefined,
+    };
+
+    setVisibilityMarks((current) => {
+      const mark = next[current[key] ?? 'clear'];
+      if (!mark) {
+        const { [key]: _, ...remaining } = current;
+        return remaining;
+      }
+      return { ...current, [key]: mark };
+    });
   };
 
   return (
@@ -292,6 +309,21 @@ export default function RingLabPage() {
         <button onClick={flipBoard} type="button">
           盤面を180°反転
         </button>
+      </div>
+      <div className="visibility-controls" aria-label="見え方の確認モード">
+        <button
+          className={showVisibilityMap ? 'is-active' : undefined}
+          onClick={() => setShowVisibilityMap((current) => !current)}
+          type="button"
+        >
+          座標・見え方を確認
+        </button>
+        {showVisibilityMap && (
+          <>
+            <span>マスを押す：緑 → 黒 → 黄 → 解除</span>
+            <button onClick={() => setVisibilityMarks({})} type="button">色を消す</button>
+          </>
+        )}
       </div>
       <div className="cube-study" aria-label="立方体を七マスずつ並べたリングの土台">
         <div className="cube-board">
@@ -448,8 +480,11 @@ export default function RingLabPage() {
           {/* The ring's near apron is a separate visual surface. It can cover
               only the lower part of a piece at the edge without making that
               cell unavailable or changing the piece's board coordinate. */}
-          {frontApronCells.map(({ r, c }) => {
+          {cubes.map(({ r, c }) => {
             const rotated = rotateWorldCell(r, c, boardRotation);
+            if (isCornerCell(r, c) || (rotated.row !== SIZE - 1 && rotated.column !== SIZE - 1)) {
+              return null;
+            }
             return (
               <i
                 aria-hidden="true"
@@ -460,8 +495,8 @@ export default function RingLabPage() {
                   top: `${18 + (rotated.row + rotated.column) * 21}px`,
                 }}
               >
-                {r === SIZE - 1 && <b className="cube-face cube-left" />}
-                {c === SIZE - 1 && <b className="cube-face cube-right" />}
+                {rotated.row === SIZE - 1 && <b className="cube-face cube-left" />}
+                {rotated.column === SIZE - 1 && <b className="cube-face cube-right" />}
               </i>
             );
           })}
@@ -521,6 +556,50 @@ export default function RingLabPage() {
               </g>
             ))}
           </svg>
+          {showVisibilityMap && (
+            <div className="visibility-map" aria-label="見え方を色で記録するマップ">
+              {ringsideTiles
+                .filter(({ r, c }) => isRingsidePerimeter(r, c))
+                .map(({ r, c }) => {
+                  const rotated = rotateCell(r, c, RINGSIDE_SIZE, boardRotation);
+                  const key = `ringside-${r}-${c}`;
+                  return (
+                    <button
+                      aria-label={`場外 ${String.fromCharCode(65 + c)}${r + 1}`}
+                      className={`visibility-cell ${visibilityMarks[key] ?? ''}`}
+                      key={key}
+                      onClick={() => cycleVisibilityMark(key)}
+                      style={{
+                        left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                        top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                      }}
+                      type="button"
+                    >
+                      {String.fromCharCode(65 + c)}{r + 1}
+                    </button>
+                  );
+                })}
+              {cubes.map(({ r, c }) => {
+                const rotated = rotateWorldCell(r, c, boardRotation);
+                const key = `ring-${r}-${c}`;
+                return (
+                  <button
+                    aria-label={`リング ${String.fromCharCode(66 + c)}${r + 2}`}
+                    className={`visibility-cell ring-cell ${visibilityMarks[key] ?? ''}`}
+                    key={key}
+                    onClick={() => cycleVisibilityMark(key)}
+                    style={{
+                      left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                      top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                    }}
+                    type="button"
+                  >
+                    {String.fromCharCode(66 + c)}{r + 2}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </main>
