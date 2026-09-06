@@ -7,7 +7,6 @@
   font-family: "Courier New", "Yu Gothic UI", monospace;
   text-align: center;
 }
-
 .ring-lab > p {
   margin: 0;
   color: #f2bf43;
@@ -495,6 +494,94 @@
   background: #f2bf43d9;
 }
 
+.coordinate-atlas {
+  max-width: 980px;
+  margin: 10px auto 40px;
+  padding: 22px;
+  border: 1px solid #52627d;
+  border-radius: 12px;
+  background: #0d1627dd;
+  box-shadow: 0 18px 28px #0006;
+  font-family: "Yu Gothic UI", sans-serif;
+}
+
+.coordinate-atlas h2 {
+  margin: 0;
+  color: #f2bf43;
+  font: 700 20px/1.2 "Yu Gothic UI", sans-serif;
+}
+
+.coordinate-atlas > p {
+  margin: 9px 0 18px;
+  color: #d9e3ef;
+  font-size: 14px;
+}
+
+.atlas-layers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.atlas-layer {
+  padding: 12px;
+  border: 1px solid #55667e;
+  border-radius: 8px;
+  background: #111d30;
+}
+
+.atlas-layer h3 {
+  margin: 0 0 10px;
+  color: #e8edf2;
+  font-size: 14px;
+}
+
+.atlas-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  aspect-ratio: 1;
+  border-top: 1px solid #8290a3;
+  border-left: 1px solid #8290a3;
+  background: #0a1322;
+}
+
+.atlas-grid i {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  border-right: 1px solid #8290a3;
+  border-bottom: 1px solid #8290a3;
+  color: #243044;
+  font: 700 clamp(7px, .78vw, 11px)/1 "Courier New", monospace;
+  font-style: normal;
+}
+
+.atlas-mat .atlas-grid i {
+  color: #34352f;
+  background: #d8cfba;
+}
+
+.atlas-ring .atlas-grid i {
+  color: #ecf4ff;
+  background: #3d5268;
+}
+
+.atlas-post .atlas-grid i {
+  color: #ffffff;
+  background: #8a6bd0;
+}
+
+.atlas-ring .atlas-grid i:empty,
+.atlas-post .atlas-grid i:empty {
+  background: #0a1322;
+}
+
+.atlas-note {
+  margin: 16px 0 0 !important;
+  color: #9fb0c7 !important;
+  font-size: 13px !important;
+}
+
 @media (max-width: 680px) {
   .cube-board {
     transform: translateX(-50%) scale(.7);
@@ -503,5 +590,14 @@
 
   .cube-study {
     min-height: 360px;
+  }
+
+  .coordinate-atlas {
+    margin-top: 0;
+    padding: 14px;
+  }
+
+  .atlas-layers {
+    grid-template-columns: 1fr;
   }
 }
