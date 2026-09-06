@@ -149,7 +149,14 @@ function isRotatedHiddenRingside(location: BoardLocation) {
   );
 }
 
-function rotationAfterMove(current: BoardRotation, location: BoardLocation): BoardRotation {
+function rotationAfterMove(
+  current: BoardRotation,
+  location: BoardLocation,
+  otherLocation: BoardLocation,
+): BoardRotation {
+  // Once both wrestlers are back on the ring, restore the familiar default
+  // viewpoint instead of keeping a ringside-driven half-turn.
+  if (location.area === 'ring' && otherLocation.area === 'ring') return 0;
   if (current === 0 && isDefaultHiddenRingside(location)) return 2;
   if (current === 2 && isRotatedHiddenRingside(location)) return 0;
   return current;
@@ -255,7 +262,7 @@ export default function RingLabPage() {
       ...current,
       [activeWrestler]: { ...current[activeWrestler], location },
     }));
-    setBoardRotation((current) => rotationAfterMove(current, location));
+    setBoardRotation((current) => rotationAfterMove(current, location, wrestlers[otherWrestler].location));
   };
 
   const setActiveFacing = (facing: RingSide) => {
@@ -438,6 +445,7 @@ export default function RingLabPage() {
           ))}
           {corners.map(({ r, c }) => {
             const location: BoardLocation = { area: 'corner', row: r, column: c };
+            const translucent = isTransparentCorner(r, c, boardRotation);
             const colorClass =
               r === SIZE - 1 && c === 0
                 ? 'corner-red'
@@ -448,7 +456,7 @@ export default function RingLabPage() {
             const rotated = rotateWorldCell(r, c, boardRotation);
             return (
             <button
-              className={`tile-cube corner-cube ${colorClass}${isTransparentCorner(r, c, boardRotation) ? ' is-translucent' : ''}`}
+              className={`tile-cube corner-cube ${colorClass}${translucent ? ' is-translucent' : ''}`}
               key={`corner-${r}-${c}`}
               aria-label="コーナー上へ移動"
               disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
@@ -456,7 +464,9 @@ export default function RingLabPage() {
               style={{
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                 top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
-                zIndex: 40 + (rotated.row + rotated.column),
+                // The foreground transparent post is a visual window, not a
+                // solid layer. A ring wrestler behind it must stay whole.
+                zIndex: (translucent ? 36 : 40) + (rotated.row + rotated.column),
               }}
             >
               <b className="cube-face cube-top" />
