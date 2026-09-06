@@ -640,6 +640,13 @@ export default function RingLabPage() {
               <div className="atlas-grid atlas-grid-9">
                 {corners.map(({ r, c }) => (
                   <i
+                    className={
+                      r === SIZE - 1 && c === 0
+                        ? 'atlas-post-red'
+                        : r === 0 && c === SIZE - 1
+                          ? 'atlas-post-blue'
+                          : 'atlas-post-neutral'
+                    }
                     key={`atlas-post-${r}-${c}`}
                     style={{ gridColumn: c + 2, gridRow: r + 2 }}
                   >
