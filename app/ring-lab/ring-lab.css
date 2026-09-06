@@ -139,6 +139,46 @@
   cursor: not-allowed;
 }
 
+/* Posts only draw the scene. Their projected top can overlap a ring square,
+   so it must not take that square's click. */
+.cube-board > .tile-cube:not(.wrestler-cube) {
+  pointer-events: none;
+}
+
+.corner-access-target,
+.ring-access-target {
+  position: absolute;
+  width: 84px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  cursor: pointer;
+}
+
+.corner-access-target { z-index: 90; }
+.ring-access-target { z-index: 100; }
+
+.corner-access-target:focus-visible {
+  outline: 2px solid #ffd04a;
+  outline-offset: -8px;
+}
+
+.ring-access-target:focus-visible {
+  outline: 2px solid #ffd04a;
+  outline-offset: -8px;
+}
+
+.corner-access-target:disabled {
+  cursor: not-allowed;
+}
+
+.ring-access-target:disabled {
+  cursor: not-allowed;
+}
+
 .wrestler-cube {
   /* Every board cell uses the same foot position, so one shared transition
      keeps diagonal moves and the ring-to-ringside step equally smooth. */
