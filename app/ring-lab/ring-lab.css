@@ -134,6 +134,11 @@
   cursor: pointer;
 }
 
+.tile-cube:disabled,
+.ringside-tile:disabled {
+  cursor: not-allowed;
+}
+
 .wrestler-cube {
   /* Every board cell uses the same foot position, so one shared transition
      keeps diagonal moves and the ring-to-ringside step equally smooth. */
@@ -141,6 +146,13 @@
   transition:
     left 280ms cubic-bezier(.22, .8, .25, 1),
     top 280ms cubic-bezier(.22, .8, .25, 1);
+}
+
+/* The foreground post and a wrestler standing on its top share one visual
+   layer. Keeping their opacity together preserves the height relationship. */
+.corner-cube.is-translucent,
+.wrestler-cube.is-translucent {
+  opacity: .42;
 }
 
 /* Only the near outer faces of the ring sit in front of an edge piece.
