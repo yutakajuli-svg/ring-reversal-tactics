@@ -49,7 +49,8 @@
 
 .movement-controls button,
 .facing-controls button,
-.board-rotation-controls button {
+.board-rotation-controls button,
+.visibility-controls button {
   min-height: 34px;
   padding: 6px 12px;
   border: 1px solid #62728e;
@@ -65,6 +66,24 @@
 .facing-controls button:hover,
 .facing-controls button.is-active,
 .board-rotation-controls button:hover {
+  border-color: #f2bf43;
+  color: #f2bf43;
+  background: #273652;
+}
+
+.visibility-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 -16px;
+  color: #d9e3ef;
+  font: 600 12px/1 "Yu Gothic UI", sans-serif;
+}
+
+.visibility-controls button:hover,
+.visibility-controls button.is-active {
   border-color: #f2bf43;
   color: #f2bf43;
   background: #273652;
@@ -429,6 +448,51 @@
 
 .rope-rebound {
   opacity: .46;
+}
+
+.visibility-map {
+  position: absolute;
+  z-index: 90;
+  inset: 0;
+  pointer-events: none;
+}
+
+.visibility-cell {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 42px;
+  padding: 0;
+  border: 1px dashed #ffffff99;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  color: #0d1420;
+  background: #f3e8c888;
+  box-shadow: none;
+  transform: translateX(-50%);
+  font: 700 11px/1 "Yu Gothic UI", sans-serif;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.visibility-cell.ring-cell {
+  color: #eef6ff;
+  background: #1a2940aa;
+}
+
+.visibility-cell.visible {
+  color: #082313;
+  background: #55de87c9;
+}
+
+.visibility-cell.hidden {
+  color: #ffffff;
+  background: #10131cdb;
+}
+
+.visibility-cell.corner-shadow {
+  color: #3f2800;
+  background: #f2bf43d9;
 }
 
 @media (max-width: 680px) {
