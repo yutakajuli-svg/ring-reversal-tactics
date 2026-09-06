@@ -21,6 +21,18 @@ const corners = [
   { r: SIZE - 1, c: SIZE - 1 },
 ];
 
+function isCornerCell(row: number, column: number) {
+  return corners.some((corner) => corner.r === row && corner.c === column);
+}
+
+function isRingsidePerimeter(row: number, column: number) {
+  return row === 0 || column === 0 || row === RINGSIDE_SIZE - 1 || column === RINGSIDE_SIZE - 1;
+}
+
+const frontApronCells = cubes.filter(({ r, c }) =>
+  (r === SIZE - 1 || c === SIZE - 1) && !isCornerCell(r, c),
+);
+
 const TURN_ORDER = ['right-front', 'right-back', 'left-back', 'left-front'] as const;
 type RingSide = (typeof TURN_ORDER)[number];
 type CubeSurface = 'front' | 'right' | 'back' | 'left' | 'top' | 'bottom';
@@ -106,11 +118,27 @@ function boardPosition(location: BoardLocation, rotation: BoardRotation) {
   // Ring cells begin at 18; the 9×9 ringside floor is one rendered level lower.
   const floorTop = (location.area === 'ringside' ? 60 : 18) + (row + column) * 21;
   const standingLevels = location.area === 'corner' ? 2 : 1;
+  // A ring cell directly below a post is still a valid cell. Draw its piece
+  // one visual half-step lower so the post naturally masks the upper half,
+  // instead of deleting the destination or stacking the piece on the post.
+  const postShadowOffset = location.area === 'ring' && isCornerCell(location.row, location.column)
+    ? 42
+    : 0;
+
+  const depth = row + column;
+  // This order follows physical spaces, rather than the cube's own height.
+  // A ring piece stays inside the ropes; an outer near-side piece is outside
+  // them; and a post can hide the appropriate part of a neighbouring piece.
+  const zIndex = location.area === 'ringside'
+    ? (depth < SIZE - 1 ? 20 + depth : 60 + depth)
+    : location.area === 'corner'
+      ? 60 + depth
+      : 37 + depth;
 
   return {
     left: `calc(50% + ${(column - row) * 42}px)`,
-    top: `${floorTop - standingLevels * 42}px`,
-    zIndex: 38 + row + column + standingLevels * 8,
+    top: `${floorTop - standingLevels * 42 + postShadowOffset}px`,
+    zIndex,
   };
 }
 
@@ -270,16 +298,24 @@ export default function RingLabPage() {
           {ringsideTiles.map(({ r, c }) => (
             (() => {
               const rotated = rotateCell(r, c, RINGSIDE_SIZE, boardRotation);
+              const style = {
+                left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                top: `${18 + (rotated.row + rotated.column) * 21}px`,
+              };
+
+              // The 9×9 base remains drawn in full, but only its outer edge
+              // is ringside. The inner 7×7 is covered by the actual ring.
+              if (!isRingsidePerimeter(r, c)) {
+                return <i aria-hidden="true" className="ringside-tile" key={`foundation-${r}-${c}`} style={style} />;
+              }
+
               return (
                 <button
                   className="ringside-tile"
                   key={`ringside-${r}-${c}`}
                   aria-label={`場外 ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
                   onClick={() => moveActiveWrestler({ area: 'ringside', row: r - 1, column: c - 1 })}
-                  style={{
-                    left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
-                    top: `${18 + (rotated.row + rotated.column) * 21}px`,
-                  }}
+                  style={style}
                 />
               );
             })()
@@ -356,7 +392,7 @@ export default function RingLabPage() {
               style={{
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                 top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
-                zIndex: 40 + rotated.row + rotated.column,
+                zIndex: 40 + (rotated.row + rotated.column),
               }}
             >
               <b className="cube-face cube-top" />
@@ -409,6 +445,26 @@ export default function RingLabPage() {
             label="CPU選手コマ"
             style={boardPosition(wrestlers.blue.location, boardRotation)}
           />
+          {/* The ring's near apron is a separate visual surface. It can cover
+              only the lower part of a piece at the edge without making that
+              cell unavailable or changing the piece's board coordinate. */}
+          {frontApronCells.map(({ r, c }) => {
+            const rotated = rotateWorldCell(r, c, boardRotation);
+            return (
+              <i
+                aria-hidden="true"
+                className="ring-apron"
+                key={`apron-${r}-${c}`}
+                style={{
+                  left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                  top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                }}
+              >
+                {r === SIZE - 1 && <b className="cube-face cube-left" />}
+                {c === SIZE - 1 && <b className="cube-face cube-right" />}
+              </i>
+            );
+          })}
           <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
