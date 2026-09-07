@@ -79,6 +79,7 @@ const HIDDEN_RINGSIDE_DESTINATION: BoardLocation = {
 type WrestlerId = 'red' | 'blue';
 type WrestlerState = { location: BoardLocation; facing: RingSide };
 type VisibilityMark = 'visible' | 'hidden' | 'corner-shadow';
+type RopeEdge = 'top' | 'right' | 'bottom' | 'left';
 
 const INITIAL_WRESTLERS: Record<WrestlerId, WrestlerState> = {
   red: { location: TOKEN_DESTINATIONS.ring, facing: 'left-front' },
@@ -168,6 +169,18 @@ function isTransparentCorner(row: number, column: number, rotation: BoardRotatio
     : row === 0 && column === 0;
 }
 
+// Leaving a rope-side square counts as using the rope only when the move
+// carries the wrestler at least two cells inward, perpendicular to that rope.
+// Moving along the rope or one cell inward does not trigger the rebound.
+function ropeUsedForMove(from: BoardLocation, to: BoardLocation): RopeEdge | null {
+  if (from.area !== 'ring' || to.area !== 'ring') return null;
+  if (from.column === 0 && to.column >= 2) return 'left';
+  if (from.column === SIZE - 1 && to.column <= SIZE - 3) return 'right';
+  if (from.row === 0 && to.row >= 2) return 'top';
+  if (from.row === SIZE - 1 && to.row <= SIZE - 3) return 'bottom';
+  return null;
+}
+
 function rotateFacingWithBoard(facing: RingSide, rotation: BoardRotation): RingSide {
   return TURN_ORDER[(TURN_ORDER.indexOf(facing) + rotation) % TURN_ORDER.length];
 }
@@ -247,6 +260,10 @@ export default function RingLabPage() {
   const [showVisibilityMap, setShowVisibilityMap] = useState(false);
   const [visibilityMarks, setVisibilityMarks] = useState<Record<string, VisibilityMark>>({});
   const [showCoordinateAtlas, setShowCoordinateAtlas] = useState(false);
+  const [ropeAnimation, setRopeAnimation] = useState<{ run: number; edge: RopeEdge | null }>({
+    run: 0,
+    edge: null,
+  });
 
   const flipBoard = () => {
     setBoardRotation((current) => (current === 0 ? 2 : 0));
@@ -257,6 +274,11 @@ export default function RingLabPage() {
   const moveActiveWrestler = (location: BoardLocation) => {
     const otherWrestler: WrestlerId = activeWrestler === 'red' ? 'blue' : 'red';
     if (isSameLocation(location, wrestlers[otherWrestler].location)) return;
+
+    const usedRope = ropeUsedForMove(wrestlers[activeWrestler].location, location);
+    if (usedRope) {
+      setRopeAnimation((current) => ({ run: current.run + 1, edge: usedRope }));
+    }
 
     setWrestlers((current) => ({
       ...current,
@@ -615,57 +637,57 @@ export default function RingLabPage() {
               </i>
             );
           })}
-          <svg className="rope-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
+          <svg className="rope-layer" key={`rope-far-${ropeAnimation.run}`} viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
                 <path className="rope rope-far" d="M372 24 L624 150">
                   <animate
                     attributeName="d"
-                    begin="indefinite"
-                    dur="1.2s"
+                    begin={ropeAnimation.edge === 'top' ? '0s' : 'indefinite'}
+                    dur=".6s"
                     calcMode="discrete"
                     keyTimes="0;.5"
-                    values="M372 24 L624 150;M372 24 Q507 69 624 150"
-                    repeatCount="indefinite"
+                    values="M372 24 Q507 69 624 150;M372 24 L624 150"
+                    repeatCount="1"
                   />
                 </path>
                 <path className="rope rope-far" d="M36 150 L288 24">
                   <animate
                     attributeName="d"
-                    begin="indefinite"
-                    dur="1.2s"
+                    begin={ropeAnimation.edge === 'left' ? '0s' : 'indefinite'}
+                    dur=".6s"
                     calcMode="discrete"
                     keyTimes="0;.5"
-                    values="M36 150 L288 24;M36 150 Q153 69 288 24"
-                    repeatCount="indefinite"
+                    values="M36 150 Q153 69 288 24;M36 150 L288 24"
+                    repeatCount="1"
                   />
                 </path>
               </g>
             ))}
           </svg>
-          <svg className="rope-layer rope-rebound-layer" viewBox="0 -20 660 420" preserveAspectRatio="none">
+          <svg className="rope-layer rope-rebound-layer" key={`rope-near-${ropeAnimation.run}`} viewBox="0 -20 660 420" preserveAspectRatio="none">
             {[-46, -27, -8].map((height) => (
               <g key={height} transform={`translate(0 ${height})`}>
                 <path className="rope rope-rebound" d="M36 150 L330 297">
                   <animate
                     attributeName="d"
-                    begin="indefinite"
-                    dur="1.2s"
+                    begin={ropeAnimation.edge === 'bottom' ? '0s' : 'indefinite'}
+                    dur=".6s"
                     calcMode="discrete"
                     keyTimes="0;.5"
-                    values="M36 150 L330 297;M36 150 Q174 242 330 297"
-                    repeatCount="indefinite"
+                    values="M36 150 Q174 242 330 297;M36 150 L330 297"
+                    repeatCount="1"
                   />
                 </path>
                 <path className="rope rope-rebound" d="M330 297 L624 150">
                   <animate
                     attributeName="d"
-                    begin="indefinite"
-                    dur="1.2s"
+                    begin={ropeAnimation.edge === 'right' ? '0s' : 'indefinite'}
+                    dur=".6s"
                     calcMode="discrete"
                     keyTimes="0;.5"
-                    values="M330 297 L624 150;M330 297 Q486 242 624 150"
-                    repeatCount="indefinite"
+                    values="M330 297 Q486 242 624 150;M330 297 L624 150"
+                    repeatCount="1"
                   />
                 </path>
               </g>
