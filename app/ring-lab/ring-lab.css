@@ -48,6 +48,8 @@
 
 .movement-controls button,
 .facing-controls button,
+.rope-throw-controls button,
+.turn-skip-controls button,
 .board-rotation-controls button,
 .visibility-controls button {
   min-height: 34px;
@@ -64,10 +66,66 @@
 .movement-controls button.is-active,
 .facing-controls button:hover,
 .facing-controls button.is-active,
+.rope-throw-controls button:hover,
 .board-rotation-controls button:hover {
   border-color: #f2bf43;
   color: #f2bf43;
   background: #273652;
+}
+
+.movement-controls button:disabled,
+.facing-controls button:disabled,
+.rope-throw-controls button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.rope-throw-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-width: 900px;
+  margin: 16px auto -8px;
+  padding: 10px 12px;
+  border: 1px solid #6f5d31;
+  border-radius: 8px;
+  color: #d9e3ef;
+  background: #111827cc;
+  font: 600 13px/1.4 "Yu Gothic UI", sans-serif;
+}
+
+.rope-throw-controls strong {
+  color: #f2bf43;
+}
+
+.rope-throw-controls output {
+  flex-basis: 100%;
+  color: #b9c7da;
+  font-size: 12px;
+}
+
+.rope-throw-controls button.is-subtle {
+  border-color: #46546b;
+  color: #aebbd0;
+}
+
+.turn-skip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px auto -8px;
+  color: #ffd36a;
+  font: 600 14px/1.4 "Yu Gothic UI", sans-serif;
+}
+
+.turn-skip-controls button {
+  border-color: #c7932a;
+  color: #ffe2a1;
+  background: #4b3512;
 }
 
 .visibility-controls {
@@ -143,6 +201,15 @@
    so it must not take that square's click. */
 .cube-board > .tile-cube:not(.wrestler-cube) {
   pointer-events: none;
+}
+
+.tile-cube.is-rebound-path .cube-top {
+  background: #8b6b28;
+}
+
+.tile-cube.is-rebound-target .cube-top {
+  background: #d0922b;
+  filter: brightness(1.25);
 }
 
 .corner-access-target,
