@@ -200,6 +200,19 @@ function forwardDistance(from: BoardLocation, to: BoardLocation, facing: RingSid
   return null;
 }
 
+function cornerTopAttackVector(from: BoardLocation, to: BoardLocation) {
+  if (from.area !== 'corner' || to.area !== 'ring') return null;
+  const rowDistance = to.row - from.row;
+  const columnDistance = to.column - from.column;
+  if (
+    Math.max(Math.abs(rowDistance), Math.abs(columnDistance)) !== 1
+    || (rowDistance === 0 && columnDistance === 0)
+  ) {
+    return null;
+  }
+  return { row: rowDistance, column: columnDistance };
+}
+
 function isPlayableLocation(location: BoardLocation) {
   if (location.area === 'ring') {
     return location.row >= 0 && location.row < SIZE
@@ -848,8 +861,6 @@ export default function RingLabPage() {
 
     if (pendingTurnSkip[attacker]) return '場外落下による行動不能中です。';
     if (attackerState.stance === 'down') return 'ダウン中に使える攻撃技は、今後の技設定で追加します。';
-    if (distance === null) return '相手が攻撃側の正面にいません。';
-
     if (kind === 'strike' || kind === 'knockback') {
       return attackerHeight === defenderHeight && distance >= 1 && distance <= 2
         ? null
@@ -861,10 +872,13 @@ export default function RingLabPage() {
         : '入れ替え投げは、同じ高さで正面に隣接している相手が対象です。';
     }
     if (kind === 'dive') {
-      if (!(attackerHeight > defenderHeight && distance >= 1 && distance <= 2)) {
-        return '飛び技は、高い場所から正面1〜2マスの低い相手が対象です。';
+      const cornerVector = cornerTopAttackVector(attackerState.location, defenderState.location);
+      const straightDive = attackerHeight > defenderHeight && distance !== null && distance >= 1 && distance <= 2;
+      if (!cornerVector && !straightDive) {
+        return '飛び技は、高い場所から正面1〜2マス、またはコーナー上から内側に接する3マスが対象です。';
       }
-      return diveFallbackLanding(attackerState.location, defenderState.location, attackerState.facing, attackerState.location)
+      const vector = cornerVector ?? directionVector(attackerState.facing);
+      return diveFallbackLanding(attackerState.location, defenderState.location, vector, attackerState.location)
         ? null
         : '攻撃側が着地できる空きマスがありません。';
     }
@@ -896,14 +910,22 @@ export default function RingLabPage() {
   const diveFallbackLanding = (
     attacker: BoardLocation,
     defender: BoardLocation,
-    facing: RingSide,
+    vector: { row: number; column: number },
     occupied: BoardLocation,
   ) => {
-    const vector = directionVector(facing);
-    const distance = forwardDistance(attacker, defender, facing);
+    const rowDistance = Math.abs(defender.row - attacker.row);
+    const columnDistance = Math.abs(defender.column - attacker.column);
+    const distance = Math.max(rowDistance, columnDistance);
     if (distance === 2) {
       const between = locationForWorldCell(attacker.row + vector.row, attacker.column + vector.column);
       if (between && !isSameLocation(between, occupied)) return between;
+    }
+    if (vector.row !== 0 && vector.column !== 0) {
+      const diagonalSides = [
+        locationForWorldCell(attacker.row, defender.column),
+        locationForWorldCell(defender.row, attacker.column),
+      ].filter((location): location is BoardLocation => Boolean(location) && !isSameLocation(location!, occupied));
+      return diagonalSides.length > 0 ? randomChoice(diagonalSides) : null;
     }
     const lateral = [
       locationForWorldCell(defender.row - vector.column, defender.column + vector.row),
@@ -917,7 +939,9 @@ export default function RingLabPage() {
     const { kind, attacker, defender } = attackTest;
     const attackerState = wrestlers[attacker];
     const defenderState = wrestlers[defender];
-    const vector = directionVector(attackerState.facing);
+    const vector = kind === 'dive'
+      ? cornerTopAttackVector(attackerState.location, defenderState.location) ?? directionVector(attackerState.facing)
+      : directionVector(attackerState.facing);
     let message = '';
 
     if (kind === 'strike') {
@@ -976,7 +1000,7 @@ export default function RingLabPage() {
         message = '入れ替え投げ失敗。技を返されて位置が入れ替わり、互いに向き合って実行側にダメージ。';
       }
     } else if (kind === 'dive') {
-      const fallback = diveFallbackLanding(attackerState.location, defenderState.location, attackerState.facing, defenderState.location);
+      const fallback = diveFallbackLanding(attackerState.location, defenderState.location, vector, defenderState.location);
       const knockback = locationForWorldCell(
         defenderState.location.row + vector.row,
         defenderState.location.column + vector.column,
