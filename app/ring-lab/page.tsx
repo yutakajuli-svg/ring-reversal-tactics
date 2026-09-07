@@ -115,14 +115,14 @@ function boardPosition(location: BoardLocation, rotation: BoardRotation) {
   const floorTop = (location.area === 'ringside' ? 60 : 18) + (row + column) * 21;
   const standingLevels = location.area === 'corner' ? 2 : 1;
   const depth = row + column;
-  // This order follows physical spaces, rather than the cube's own height.
-  // A ring piece stays inside the ropes; an outer near-side piece is outside
-  // them; and a post can hide the appropriate part of a neighbouring piece.
+  // All solid objects on the ring share the same depth scale. This lets a
+  // nearer post cover a farther wrestler, while a nearer wrestler correctly
+  // covers a farther post. Height only lifts the token into its own band.
   const zIndex = location.area === 'ringside'
-    ? (depth < SIZE - 1 ? 20 + depth : 60 + depth)
+    ? (depth < SIZE - 1 ? 20 + depth : 90 + depth)
     : location.area === 'corner'
-      ? 60 + depth
-      : 37 + depth;
+      ? 80 + depth
+      : 60 + depth;
 
   return {
     left: `calc(50% + ${(column - row) * 42}px)`,
@@ -464,9 +464,9 @@ export default function RingLabPage() {
               style={{
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
                 top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
-                // The foreground transparent post is a visual window, not a
-                // solid layer. A ring wrestler behind it must stay whole.
-                zIndex: (translucent ? 30 : 40) + (rotated.row + rotated.column),
+                // Posts and ring wrestlers use the same depth band. Opacity
+                // changes visibility, never the physical front/back order.
+                zIndex: 60 + (rotated.row + rotated.column),
               }}
             >
               <b className="cube-face cube-top" />

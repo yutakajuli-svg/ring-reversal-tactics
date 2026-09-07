@@ -161,14 +161,12 @@
 .corner-access-target { z-index: 90; }
 .ring-access-target { z-index: 100; }
 
-.corner-access-target:focus-visible {
-  outline: 2px solid #ffd04a;
-  outline-offset: -8px;
-}
-
+.corner-access-target:focus-visible,
 .ring-access-target:focus-visible {
-  outline: 2px solid #ffd04a;
-  outline-offset: -8px;
+  /* These controls sit invisibly over projected top faces. Drawing a browser
+     outline around their clipped hit shape created the broken gold oval that
+     looked like part of the wrestler. */
+  outline: none;
 }
 
 .corner-access-target:disabled {
@@ -482,7 +480,9 @@
 }
 
 .rope-rebound-layer {
-  z-index: 55;
+  /* Near ropes cross ring-level wrestlers, but stay behind a wrestler who is
+     standing on top of a corner post. */
+  z-index: 75;
 }
 
 .rope {
