@@ -136,7 +136,44 @@ function isSameLocation(left: BoardLocation, right: BoardLocation) {
   return left.area === right.area && left.row === right.row && left.column === right.column;
 }
 
+const CORNER_MOVEMENT_RULES = [
+  { ring: [0, 0], outer: [-1, -1], sides: [[-1, 0], [0, -1]] },
+  { ring: [0, SIZE - 1], outer: [-1, SIZE], sides: [[-1, SIZE - 1], [0, SIZE]] },
+  { ring: [SIZE - 1, 0], outer: [SIZE, -1], sides: [[SIZE, 0], [SIZE - 1, -1]] },
+  { ring: [SIZE - 1, SIZE - 1], outer: [SIZE, SIZE], sides: [[SIZE, SIZE - 1], [SIZE - 1, SIZE]] },
+] as const;
+
+function isAt(location: BoardLocation, area: BoardLocation['area'], [row, column]: readonly [number, number]) {
+  return location.area === area && location.row === row && location.column === column;
+}
+
+function isBlockedCornerMove(from: BoardLocation, to: BoardLocation, rotation: BoardRotation) {
+  // A wrestler may drop from a height-2 post to ringside, but cannot climb
+  // directly from height 0 back onto any post.
+  if (from.area === 'ringside' && to.area === 'corner') return true;
+
+  return CORNER_MOVEMENT_RULES.some(({ ring, outer, sides }) => {
+    const fromRingCorner = isAt(from, 'ring', ring);
+    const toRingCorner = isAt(to, 'ring', ring);
+    const toOuterCorner = isAt(to, 'ringside', outer);
+    const fromSide = sides.some((side) => isAt(from, 'ringside', side));
+    const toSide = sides.some((side) => isAt(to, 'ringside', side));
+    const outerCornerIsHidden = rotation === 0
+      ? outer[0] === -1 && outer[1] === -1
+      : outer[0] === SIZE && outer[1] === SIZE;
+
+    // The post and ropes block movement between the height-1 ring corner and
+    // its two adjacent height-0 squares. At floor level only the outer corner
+    // hidden by the current view is exit-only; the other three remain open.
+    return (fromRingCorner && toSide)
+      || (fromSide && toRingCorner)
+      || (outerCornerIsHidden && fromSide && toOuterCorner);
+  });
+}
+
 function isDefaultHiddenRingside(location: BoardLocation) {
+  // A1 keeps the current view until the wrestler chooses B1 or A2.
+  if (isAt(location, 'ringside', [-1, -1])) return false;
   return location.area === 'ringside' && (
     (location.column === -1 && location.row >= -1 && location.row <= 6)
     || (location.row === -1 && location.column >= 0 && location.column <= 6)
@@ -144,6 +181,8 @@ function isDefaultHiddenRingside(location: BoardLocation) {
 }
 
 function isRotatedHiddenRingside(location: BoardLocation) {
+  // I9 likewise waits for the next step before deciding whether to turn back.
+  if (isAt(location, 'ringside', [SIZE, SIZE])) return false;
   return location.area === 'ringside' && (
     (location.column === 7 && location.row >= 0 && location.row <= 7)
     || (location.row === 7 && location.column >= 0 && location.column <= 7)
@@ -152,12 +191,31 @@ function isRotatedHiddenRingside(location: BoardLocation) {
 
 function rotationAfterMove(
   current: BoardRotation,
+  from: BoardLocation,
   location: BoardLocation,
   otherLocation: BoardLocation,
 ): BoardRotation {
   // Once both wrestlers are back on the ring, restore the familiar default
   // viewpoint instead of keeping a ringside-driven half-turn.
   if (location.area === 'ring' && otherLocation.area === 'ring') return 0;
+
+  // A1 and I9 are the two view-dependent outer corners. Which exit turns the
+  // board depends on the current view; the other exit stays in that view.
+  const viewCorner = [
+    { corner: [-1, -1], normalExit: [-1, 0], rotatedExit: [0, -1] },
+    { corner: [SIZE, SIZE], normalExit: [SIZE - 1, SIZE], rotatedExit: [SIZE, SIZE - 1] },
+  ].find(({ corner }) => isAt(from, 'ringside', corner as readonly [number, number]));
+
+  if (viewCorner) {
+    const leavesByNormalExit = isAt(location, 'ringside', viewCorner.normalExit as readonly [number, number]);
+    const leavesByRotatedExit = isAt(location, 'ringside', viewCorner.rotatedExit as readonly [number, number]);
+    if (leavesByNormalExit || leavesByRotatedExit) {
+      if (current === 0 && leavesByNormalExit) return 2;
+      if (current === 2 && leavesByRotatedExit) return 0;
+      return current;
+    }
+  }
+
   if (current === 0 && isDefaultHiddenRingside(location)) return 2;
   if (current === 2 && isRotatedHiddenRingside(location)) return 0;
   return current;
@@ -273,9 +331,11 @@ export default function RingLabPage() {
 
   const moveActiveWrestler = (location: BoardLocation) => {
     const otherWrestler: WrestlerId = activeWrestler === 'red' ? 'blue' : 'red';
+    const from = wrestlers[activeWrestler].location;
     if (isSameLocation(location, wrestlers[otherWrestler].location)) return;
+    if (isBlockedCornerMove(from, location, boardRotation)) return;
 
-    const usedRope = ropeUsedForMove(wrestlers[activeWrestler].location, location);
+    const usedRope = ropeUsedForMove(from, location);
     if (usedRope) {
       setRopeAnimation((current) => ({ run: current.run + 1, edge: usedRope }));
     }
@@ -284,7 +344,7 @@ export default function RingLabPage() {
       ...current,
       [activeWrestler]: { ...current[activeWrestler], location },
     }));
-    setBoardRotation((current) => rotationAfterMove(current, location, wrestlers[otherWrestler].location));
+    setBoardRotation((current) => rotationAfterMove(current, from, location, wrestlers[otherWrestler].location));
   };
 
   const setActiveFacing = (facing: RingSide) => {
@@ -311,6 +371,12 @@ export default function RingLabPage() {
       return { ...current, [key]: mark };
     });
   };
+
+  const activeLocation = wrestlers[activeWrestler].location;
+  const otherLocation = wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location;
+  const destinationIsBlocked = (location: BoardLocation) => (
+    isSameLocation(location, otherLocation) || isBlockedCornerMove(activeLocation, location, boardRotation)
+  );
 
   return (
     <main className="ring-lab">
@@ -399,7 +465,7 @@ export default function RingLabPage() {
                   className="ringside-tile"
                   key={`ringside-${r}-${c}`}
                   aria-label={`場外 ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
-                  disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
+                  disabled={destinationIsBlocked(location)}
                   onClick={() => moveActiveWrestler(location)}
                   style={style}
                 />
@@ -441,8 +507,7 @@ export default function RingLabPage() {
           {cubes.map(({ r, c }) => (
             (() => {
               const location: BoardLocation = { area: 'ring', row: r, column: c };
-              const isBlocked = isCornerCell(r, c)
-                || isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location);
+              const isBlocked = isCornerCell(r, c) || destinationIsBlocked(location);
               const rotated = rotateWorldCell(r, c, boardRotation);
               return (
                 <button
@@ -481,7 +546,7 @@ export default function RingLabPage() {
               className={`tile-cube corner-cube ${colorClass}${translucent ? ' is-translucent' : ''}`}
               key={`corner-${r}-${c}`}
               aria-label="コーナー上へ移動"
-              disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
+              disabled={destinationIsBlocked(location)}
               onClick={() => moveActiveWrestler(location)}
               style={{
                 left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
@@ -504,12 +569,11 @@ export default function RingLabPage() {
           {corners.map(({ r, c }) => {
             const cornerLocation: BoardLocation = { area: 'corner', row: r, column: c };
             const rotated = rotateWorldCell(r, c, boardRotation);
-            const otherLocation = wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location;
             return (
               <button
                 aria-label={`${String.fromCharCode(66 + c)}${r + 2} コーナーポスト側面：高さ2へ移動`}
                 className="corner-access-target"
-                disabled={isSameLocation(cornerLocation, otherLocation)}
+                disabled={destinationIsBlocked(cornerLocation)}
                 key={`corner-access-${r}-${c}`}
                 onClick={() => moveActiveWrestler(cornerLocation)}
                 style={{
@@ -528,12 +592,11 @@ export default function RingLabPage() {
             .map(({ r, c }) => {
               const cornerLocation: BoardLocation = { area: 'corner', row: r, column: c };
               const rotated = rotateWorldCell(r, c, boardRotation);
-              const otherLocation = wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location;
               return (
                 <button
                   aria-label={`${String.fromCharCode(66 + c)}${r + 2} コーナーポスト天面：高さ2へ移動`}
                   className="corner-top-access-target"
-                  disabled={isSameLocation(cornerLocation, otherLocation)}
+                  disabled={destinationIsBlocked(cornerLocation)}
                   key={`corner-top-access-${r}-${c}`}
                   onClick={() => moveActiveWrestler(cornerLocation)}
                   style={{
@@ -551,7 +614,7 @@ export default function RingLabPage() {
               <button
                 aria-label={`リング ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
                 className="ring-access-target"
-                disabled={isSameLocation(location, wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location)}
+                disabled={destinationIsBlocked(location)}
                 key={`ring-access-${r}-${c}`}
                 onClick={() => moveActiveWrestler(location)}
                 style={{
