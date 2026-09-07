@@ -475,25 +475,24 @@ export default function RingLabPage() {
             </button>
             );
           })}
-          {/* A height-1 corner is not a destination. Its visible top face is
-              the in-board control for the height-2 post directly above it.
-              Keeping this hit surface separate leaves the projected G7 ring
-              top selectable even where it overlaps the H8 post top. */}
+          {/* A corner post is selected from either of its vertical faces.
+              Its projected top can occupy the exact same pixels as an inward
+              ring square (G7 at the foreground H8 post), so the top remains
+              available to the ring while the post body means "climb". */}
           {corners.map(({ r, c }) => {
             const cornerLocation: BoardLocation = { area: 'corner', row: r, column: c };
-            const ringLocation: BoardLocation = { area: 'ring', row: r, column: c };
             const rotated = rotateWorldCell(r, c, boardRotation);
             const otherLocation = wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location;
             return (
               <button
-                aria-label={`高さ1 ${String.fromCharCode(66 + c)}${r + 2}：コーナー天面へ移動`}
+                aria-label={`${String.fromCharCode(66 + c)}${r + 2} コーナーポスト側面：高さ2へ移動`}
                 className="corner-access-target"
-                disabled={isSameLocation(cornerLocation, otherLocation) || isSameLocation(ringLocation, otherLocation)}
+                disabled={isSameLocation(cornerLocation, otherLocation)}
                 key={`corner-access-${r}-${c}`}
                 onClick={() => moveActiveWrestler(cornerLocation)}
                 style={{
                   left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
-                  top: `${18 + (rotated.row + rotated.column) * 21}px`,
+                  top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
                 }}
                 type="button"
               />

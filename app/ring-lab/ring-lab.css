@@ -149,17 +149,25 @@
 .ring-access-target {
   position: absolute;
   width: 84px;
-  height: 42px;
   padding: 0;
   border: 0;
   background: transparent;
   transform: translateX(-50%);
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   cursor: pointer;
 }
 
-.corner-access-target { z-index: 90; }
-.ring-access-target { z-index: 100; }
+.corner-access-target {
+  z-index: 110;
+  height: 84px;
+  /* The concave top edge excludes the post's diamond top face. */
+  clip-path: polygon(0 25%, 50% 50%, 100% 25%, 100% 75%, 50% 100%, 0 75%);
+}
+
+.ring-access-target {
+  z-index: 100;
+  height: 42px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
 
 .corner-access-target:focus-visible,
 .ring-access-target:focus-visible {
