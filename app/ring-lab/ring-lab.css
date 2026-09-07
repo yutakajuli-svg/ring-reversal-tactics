@@ -147,7 +147,8 @@
 
 .corner-access-target,
 .corner-top-access-target,
-.ring-access-target {
+.ring-access-target,
+.ringside-gap-access-target {
   position: absolute;
   width: 84px;
   padding: 0;
@@ -176,9 +177,28 @@
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }
 
+.ringside-gap-access-target {
+  /* Keep only the empty half of the projected top diamond. The omitted half
+     belongs to the adjacent corner post's clickable side. */
+  z-index: 118;
+  width: 42px;
+  height: 42px;
+}
+
+.ringside-gap-access-target.is-left {
+  transform: translateX(-100%);
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+}
+
+.ringside-gap-access-target.is-right {
+  transform: none;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
 .corner-access-target:focus-visible,
 .corner-top-access-target:focus-visible,
-.ring-access-target:focus-visible {
+.ring-access-target:focus-visible,
+.ringside-gap-access-target:focus-visible {
   /* These controls sit invisibly over projected top faces. Drawing a browser
      outline around their clipped hit shape created the broken gold oval that
      looked like part of the wrestler. */

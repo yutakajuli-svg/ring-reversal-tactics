@@ -143,6 +143,21 @@ const CORNER_MOVEMENT_RULES = [
   { ring: [SIZE - 1, SIZE - 1], outer: [SIZE, SIZE], sides: [[SIZE, SIZE - 1], [SIZE - 1, SIZE]] },
 ] as const;
 
+const RINGSIDE_GAP_TARGETS = {
+  0: [
+    { label: 'A8', side: 'left', location: { area: 'ringside', row: 6, column: -1 } },
+    { label: 'H1', side: 'right', location: { area: 'ringside', row: -1, column: 6 } },
+  ],
+  2: [
+    { label: 'I2', side: 'left', location: { area: 'ringside', row: 0, column: SIZE } },
+    { label: 'B9', side: 'right', location: { area: 'ringside', row: SIZE, column: 0 } },
+  ],
+} as const satisfies Record<BoardRotation, readonly {
+  label: string;
+  side: 'left' | 'right';
+  location: BoardLocation;
+}[]>;
+
 function isAt(location: BoardLocation, area: BoardLocation['area'], [row, column]: readonly [number, number]) {
   return location.area === area && location.row === row && location.column === column;
 }
@@ -625,6 +640,28 @@ export default function RingLabPage() {
               />
             );
           })}
+          {/* At these four side squares, the floor diamond is easy to miss next
+              to a corner post. The empty diamond where a wrestler's top would
+              appear is a second, non-overlapping way to choose that same
+              destination. Only the two targets exposed by the current view are
+              present, and occupied or illegal destinations do not intercept
+              clicks. */}
+          {RINGSIDE_GAP_TARGETS[boardRotation]
+            .filter(({ location }) => !destinationIsBlocked(location))
+            .map(({ label, location, side }) => {
+              const position = boardPosition(location, boardRotation);
+              return (
+                <button
+                  aria-label={`${label} 手前の空白：${label}へ移動`}
+                  className={`ringside-gap-access-target is-${side}`}
+                  data-ringside-gap-target={label}
+                  key={`ringside-gap-access-${label}`}
+                  onClick={() => moveActiveWrestler(location)}
+                  style={{ left: position.left, top: position.top }}
+                  type="button"
+                />
+              );
+            })}
           <svg className="grid-layer" viewBox="0 0 660 420" preserveAspectRatio="none">
             {Array.from({ length: SIZE - 1 }, (_, index) => {
               const boundary = index + 1;
