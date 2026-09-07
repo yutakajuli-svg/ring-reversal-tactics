@@ -49,6 +49,8 @@
 .movement-controls button,
 .facing-controls button,
 .rope-throw-controls button,
+.attack-test-controls button,
+.down-recovery-controls button,
 .turn-skip-controls button,
 .board-rotation-controls button,
 .visibility-controls button {
@@ -67,6 +69,8 @@
 .facing-controls button:hover,
 .facing-controls button.is-active,
 .rope-throw-controls button:hover,
+.attack-test-controls button:hover,
+.down-recovery-controls button:hover,
 .board-rotation-controls button:hover {
   border-color: #f2bf43;
   color: #f2bf43;
@@ -75,12 +79,16 @@
 
 .movement-controls button:disabled,
 .facing-controls button:disabled,
-.rope-throw-controls button:disabled {
+.rope-throw-controls button:disabled,
+.attack-test-controls button:disabled,
+.down-recovery-controls button:disabled,
+.board-rotation-controls button:disabled {
   opacity: .42;
   cursor: not-allowed;
 }
 
-.rope-throw-controls {
+.rope-throw-controls,
+.attack-test-controls {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,17 +104,20 @@
   font: 600 13px/1.4 "Yu Gothic UI", sans-serif;
 }
 
-.rope-throw-controls strong {
+.rope-throw-controls strong,
+.attack-test-controls strong {
   color: #f2bf43;
 }
 
-.rope-throw-controls output {
+.rope-throw-controls output,
+.attack-test-controls output {
   flex-basis: 100%;
   color: #b9c7da;
   font-size: 12px;
 }
 
-.rope-throw-controls button.is-subtle {
+.rope-throw-controls button.is-subtle,
+.attack-test-controls button.is-subtle {
   border-color: #46546b;
   color: #aebbd0;
 }
@@ -126,6 +137,27 @@
   border-color: #c7932a;
   color: #ffe2a1;
   background: #4b3512;
+}
+
+.down-recovery-controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px auto -8px;
+  color: #ffd36a;
+  font: 600 14px/1.4 "Yu Gothic UI", sans-serif;
+}
+
+.down-recovery-controls > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #9a7431;
+  border-radius: 8px;
+  background: #2a2115d9;
 }
 
 .visibility-controls {
@@ -288,6 +320,27 @@
   transition:
     left 280ms cubic-bezier(.22, .8, .25, 1),
     top 280ms cubic-bezier(.22, .8, .25, 1);
+}
+
+.wrestler-cube.is-down {
+  filter: saturate(.55) brightness(.82);
+}
+
+.wrestler-cube.is-down::after {
+  content: "DOWN";
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 50%;
+  padding: 3px 5px;
+  border: 1px solid #ffd36a;
+  border-radius: 4px;
+  color: #fff3c4;
+  background: #17120ddd;
+  font: 700 9px/1 "Courier New", monospace;
+  letter-spacing: .08em;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* The foreground post and a wrestler standing on its top share one visual
