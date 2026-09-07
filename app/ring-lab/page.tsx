@@ -498,6 +498,30 @@ export default function RingLabPage() {
               />
             );
           })}
+          {/* B2, H2 and B8 can also be selected directly from the post top.
+              H8 deliberately has no top target because that same projected
+              diamond belongs to G7; H8 remains selectable from its sides. */}
+          {corners
+            .filter(({ r, c }) => r !== SIZE - 1 || c !== SIZE - 1)
+            .map(({ r, c }) => {
+              const cornerLocation: BoardLocation = { area: 'corner', row: r, column: c };
+              const rotated = rotateWorldCell(r, c, boardRotation);
+              const otherLocation = wrestlers[activeWrestler === 'red' ? 'blue' : 'red'].location;
+              return (
+                <button
+                  aria-label={`${String.fromCharCode(66 + c)}${r + 2} コーナーポスト天面：高さ2へ移動`}
+                  className="corner-top-access-target"
+                  disabled={isSameLocation(cornerLocation, otherLocation)}
+                  key={`corner-top-access-${r}-${c}`}
+                  onClick={() => moveActiveWrestler(cornerLocation)}
+                  style={{
+                    left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                    top: `${18 + (rotated.row + rotated.column) * 21 - 42}px`,
+                  }}
+                  type="button"
+                />
+              );
+            })}
           {cubes.filter(({ r, c }) => !isCornerCell(r, c)).map(({ r, c }) => {
             const location: BoardLocation = { area: 'ring', row: r, column: c };
             const rotated = rotateWorldCell(r, c, boardRotation);
