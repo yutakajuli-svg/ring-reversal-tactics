@@ -615,10 +615,19 @@ function WrestlerCube({
   const eyes = FRONT_EYES.map(({ surface, u, v }) => projectCubeObject(facing, surface, u, v))
     .filter((point): point is { x: number; y: number } => point !== null);
   const spritePosition: Record<RingSide, string> = {
-    'right-back': 'calc(100% + 7px) 0%',
-    'right-front': 'calc(0% - 7px) 0%',
-    'left-front': 'calc(100% + 10px) calc(100% + 4px)',
-    'left-back': 'calc(0% - 6px) calc(100% + 4px)',
+    'right-back': '100% 0%',
+    'right-front': '0% 0%',
+    'left-front': '100% 100%',
+    'left-back': '0% 100%',
+  };
+  // Each generated frame has slightly different transparent margins. Move the
+  // whole visual layer so the feet land at the centre of the isometric cell;
+  // the wrapper itself remains at the original board coordinate.
+  const spriteTransform: Record<RingSide, string> = {
+    'right-back': 'translate(7px, -19px)',
+    'right-front': 'translate(-7px, -19px)',
+    'left-front': 'translate(10px, -16px)',
+    'left-back': 'translate(-6px, -15px)',
   };
 
   return (
@@ -639,6 +648,7 @@ function WrestlerCube({
           style={{
             backgroundImage: `url(${ASSET_BASE}/assets/wrestler-red-rounded-sprites.png)`,
             backgroundPosition: spritePosition[facing],
+            transform: spriteTransform[facing],
           }}
         />
       )}
