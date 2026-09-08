@@ -536,6 +536,51 @@
   box-shadow: 0 0 13px #50d9ad99;
 }
 
+.rope-direction-target {
+  position: absolute;
+  z-index: 150;
+  width: 84px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid #fff3a6;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: #f2bf43e8;
+  color: #171207;
+  cursor: pointer;
+  box-shadow: 0 0 18px #f2bf43cc;
+  animation: rope-target-pulse .75s ease-in-out infinite alternate;
+}
+
+.rope-direction-target.is-corner {
+  border-color: #ffe3d8;
+  background: #ef634ee8;
+  color: #fff;
+  box-shadow: 0 0 20px #ef634ed9;
+}
+
+.rope-direction-target.is-barrier {
+  background: #ee8c36e8;
+  box-shadow: 0 0 18px #ee8c36bb;
+}
+
+.rope-direction-target span {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  font: 900 24px/1 "Yu Gothic UI", sans-serif;
+  filter: drop-shadow(0 1px 0 #fff8);
+}
+
+.rope-direction-target:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+@keyframes rope-target-pulse {
+  to { filter: brightness(1.22); }
+}
+
 .tile-cube.is-move-reachable .cube-top,
 .ringside-tile.is-move-reachable {
   animation: move-cell-pulse 1.15s ease-in-out infinite alternate;
