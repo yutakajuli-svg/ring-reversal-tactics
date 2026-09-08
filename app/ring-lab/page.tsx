@@ -615,10 +615,10 @@ function WrestlerCube({
   const eyes = FRONT_EYES.map(({ surface, u, v }) => projectCubeObject(facing, surface, u, v))
     .filter((point): point is { x: number; y: number } => point !== null);
   const spritePosition: Record<RingSide, string> = {
-    'right-back': '100% 0%',
-    'right-front': '0% 0%',
-    'left-front': '100% 100%',
-    'left-back': '0% 100%',
+    'right-back': 'calc(100% + 7px) 0%',
+    'right-front': 'calc(0% - 7px) 0%',
+    'left-front': 'calc(100% + 10px) calc(100% + 4px)',
+    'left-back': 'calc(0% - 6px) calc(100% + 4px)',
   };
 
   return (
@@ -1851,9 +1851,7 @@ export default function RingLabPage() {
                   top: `${floorTop}px`,
                 }}
                 type="button"
-              >
-                <span aria-hidden="true">{facing === 'right-back' ? '↗' : facing === 'right-front' ? '↘' : facing === 'left-front' ? '↙' : '↖'}</span>
-              </button>
+              />
             );
           })}
           {cubes.filter(({ r, c }) => !isCornerCell(r, c)).map(({ r, c }) => {

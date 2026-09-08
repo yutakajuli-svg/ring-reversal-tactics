@@ -564,14 +564,6 @@
   box-shadow: 0 0 18px #ee8c36bb;
 }
 
-.rope-direction-target span {
-  display: grid;
-  height: 100%;
-  place-items: center;
-  font: 900 24px/1 "Yu Gothic UI", sans-serif;
-  filter: drop-shadow(0 1px 0 #fff8);
-}
-
 .rope-direction-target:focus-visible {
   outline: 3px solid #fff;
   outline-offset: 3px;
