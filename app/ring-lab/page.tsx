@@ -697,7 +697,7 @@ export default function RingLabPage() {
     }
     const otherId = otherWrestler(activeWrestler);
     const from = wrestlers[activeWrestler].location;
-    const moveDistance = Math.max(Math.abs(from.row - location.row), Math.abs(from.column - location.column));
+    const moveDistance = Math.abs(from.row - location.row) + Math.abs(from.column - location.column);
     if (moveDistance > 2) {
       setAttackTest({ phase: 'idle', message: '1ターンの移動は2マスまでです。' });
       return;
@@ -995,6 +995,24 @@ export default function RingLabPage() {
     setAttackTest({ phase: 'choose-result', kind, attacker, defender });
   };
 
+  const beginRandomAttack = () => {
+    const attacker = activeWrestler;
+    const defender = otherWrestler(attacker);
+    const availableKinds = (
+      ['strike', 'knockback', 'swap', 'dive', 'pull-down', 'knock-down'] as const
+    ).filter((kind) => attackValidation(kind, attacker, defender) === null);
+
+    if (availableKinds.length === 0) {
+      setAttackTest({
+        phase: 'idle',
+        message: '現在の位置・高さ・向きで使用できる攻撃がありません。向きを変えるか移動してください。',
+      });
+      return;
+    }
+
+    beginAttackTest(randomChoice(availableKinds));
+  };
+
   const diveFallbackLanding = (
     attacker: BoardLocation,
     defender: BoardLocation,
@@ -1248,10 +1266,8 @@ export default function RingLabPage() {
       let destination = cpu.location;
       const candidates = playableLocations
         .filter((location) => {
-          const distance = Math.max(
-            Math.abs(cpu.location.row - location.row),
-            Math.abs(cpu.location.column - location.column),
-          );
+          const distance = Math.abs(cpu.location.row - location.row)
+            + Math.abs(cpu.location.column - location.column);
           return distance >= 1
             && distance <= 2
             && !isSameLocation(location, player.location)
@@ -1333,10 +1349,8 @@ export default function RingLabPage() {
   const otherLocation = wrestlers[otherWrestler(activeWrestler)].location;
   const canControlActive = debugMode || activeWrestler === 'red';
   const isMoveReachable = (location: BoardLocation) => {
-    const distance = Math.max(
-      Math.abs(activeLocation.row - location.row),
-      Math.abs(activeLocation.column - location.column),
-    );
+    const distance = Math.abs(activeLocation.row - location.row)
+      + Math.abs(activeLocation.column - location.column);
     return canControlActive
       && !phaseLocksBoard
       && !isCpuThinking
@@ -2010,12 +2024,7 @@ export default function RingLabPage() {
           <strong>DICE ROLL...</strong>
         ) : (
           <>
-            <button onClick={() => beginAttackTest('strike')} type="button">通常打撃</button>
-            <button onClick={() => beginAttackTest('knockback')} type="button">ノックバック</button>
-            <button onClick={() => beginAttackTest('swap')} type="button">入れ替え投げ</button>
-            <button onClick={() => beginAttackTest('dive')} type="button">飛び技</button>
-            <button onClick={() => beginAttackTest('pull-down')} type="button">引きずり落とし</button>
-            <button onClick={() => beginAttackTest('knock-down')} type="button">高所崩し</button>
+            <button onClick={beginRandomAttack} type="button">攻撃</button>
             <button className="rope-action" onClick={beginRopeThrowTest} type="button">ロープスロー</button>
             <button className="is-subtle" onClick={() => advanceTurn('red')} type="button">待機</button>
           </>
