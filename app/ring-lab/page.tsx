@@ -305,8 +305,23 @@ function ropeThrowGeometry(attacker: BoardLocation, direction: RingSide) {
     ropeColumn += vector.column;
   }
 
+  if (isCornerCell(ropeRow, ropeColumn)) {
+    return {
+      fellOut: false as const,
+      cornerImpact: true as const,
+      cornerLocation: { area: 'corner', row: ropeRow, column: ropeColumn } as BoardLocation,
+      destination: {
+        area: 'ring',
+        row: ropeRow - vector.row,
+        column: ropeColumn - vector.column,
+      } as BoardLocation,
+      edge: vector.edge,
+    };
+  }
+
   return {
     fellOut: false as const,
+    cornerImpact: false as const,
     returnLocation,
     ropeLocation: { area: 'ring', row: ropeRow, column: ropeColumn } as const,
     edge: vector.edge,
@@ -362,6 +377,45 @@ function ringsideThrowGeometry(attacker: BoardLocation, direction: RingSide) {
       column: destinationColumn,
     } as BoardLocation,
   };
+}
+
+function ropeDirectionTarget(attacker: BoardLocation, direction: RingSide) {
+  if (attacker.area === 'ring') {
+    const geometry = ropeThrowGeometry(attacker, direction);
+    if (!geometry) return null;
+    if (geometry.fellOut) return { location: geometry.destination, kind: 'outside' as const };
+    if (geometry.cornerImpact) return { location: geometry.cornerLocation, kind: 'corner' as const };
+    return { location: geometry.ropeLocation, kind: 'rope' as const };
+  }
+
+  if (attacker.area === 'ringside') {
+    const geometry = ringsideThrowGeometry(attacker, direction);
+    if (!geometry) return null;
+    if (geometry.kind === 'corner-impact') {
+      return {
+        location: { area: 'corner', row: geometry.corner.r, column: geometry.corner.c } as BoardLocation,
+        kind: 'corner' as const,
+      };
+    }
+    if ('destination' in geometry) {
+      return {
+        location: geometry.destination,
+        kind: geometry.kind === 'ring-return' ? 'rope' as const : 'barrier' as const,
+      };
+    }
+
+    const vector = directionVector(direction);
+    return {
+      location: {
+        area: 'ringside',
+        row: attacker.row + vector.row,
+        column: attacker.column + vector.column,
+      } as BoardLocation,
+      kind: 'barrier' as const,
+    };
+  }
+
+  return null;
 }
 
 function reboundPath(
@@ -839,6 +893,39 @@ export default function RingLabPage() {
           message: outcome === 'success'
             ? 'ロープスロー成功。相手が場外へ落下し、次の自分のターンは行動不能です。'
             : 'ロープスロー失敗。実行側が場外へ落下し、次の自分のターンは行動不能です。',
+        });
+        advanceTurn(attacker);
+      }, 320);
+      return;
+    }
+
+    if (geometry.cornerImpact) {
+      const affected = outcome === 'success' ? defender : attacker;
+      const affectedFrom = wrestlers[affected].location;
+      const otherLocation = wrestlers[otherWrestler(affected)].location;
+      const destination = isSameLocation(geometry.destination, otherLocation)
+        ? affectedFrom
+        : geometry.destination;
+
+      setWrestlers((current) => ({
+        ...current,
+        [attacker]: { ...current[attacker], facing: direction },
+        [defender]: { ...current[defender], facing: direction },
+        [affected]: { ...current[affected], facing: direction, location: destination },
+      }));
+      queueRopeThrowStep(() => {
+        setBoardRotation((current) => rotationAfterMove(
+          current,
+          affectedFrom,
+          destination,
+          otherLocation,
+        ));
+        registerHit(affected);
+        setRopeThrowTest({
+          phase: 'idle',
+          message: outcome === 'success'
+            ? 'ロープスロー成功。相手がコーナーポストへ衝突し、ダメージ。'
+            : 'ロープスロー失敗。実行側がコーナーポストへ衝突し、ダメージ。',
         });
         advanceTurn(attacker);
       }, 320);
@@ -1366,6 +1453,12 @@ export default function RingLabPage() {
   const reboundTargetKey = ropeThrowTest.phase === 'awaiting-intercept'
     ? `${ropeThrowTest.returnLocation.row}-${ropeThrowTest.returnLocation.column}`
     : '';
+  const ropeDirectionTargets = ropeThrowTest.phase === 'choose-direction'
+    ? ROPE_THROW_DIRECTIONS.flatMap(({ facing, label }) => {
+        const target = ropeDirectionTarget(wrestlers[ropeThrowTest.attacker].location, facing);
+        return target ? [{ facing, label, ...target }] : [];
+      })
+    : [];
 
   return (
     <main className="ring-lab">
@@ -1723,6 +1816,27 @@ export default function RingLabPage() {
                 />
               );
             })}
+          {ropeDirectionTargets.map(({ facing, kind, label, location }) => {
+            const rotated = rotateWorldCell(location.row, location.column, boardRotation);
+            const floorTop = (location.area === 'ringside' ? 60 : 18)
+              + (rotated.row + rotated.column) * 21
+              - (location.area === 'corner' ? 42 : 0);
+            return (
+              <button
+                aria-label={`ロープスロー：${label}方向${kind === 'corner' ? '（コーナー衝突）' : ''}`}
+                className={`rope-direction-target is-${kind}`}
+                key={`rope-direction-${facing}`}
+                onClick={() => chooseRopeThrowDirection(facing)}
+                style={{
+                  left: `calc(50% + ${(rotated.column - rotated.row) * 42}px)`,
+                  top: `${floorTop}px`,
+                }}
+                type="button"
+              >
+                <span aria-hidden="true">{facing === 'right-back' ? '↗' : facing === 'right-front' ? '↘' : facing === 'left-front' ? '↙' : '↖'}</span>
+              </button>
+            );
+          })}
           {cubes.filter(({ r, c }) => !isCornerCell(r, c)).map(({ r, c }) => {
             const location: BoardLocation = { area: 'ring', row: r, column: c };
             const rotated = rotateWorldCell(r, c, boardRotation);
@@ -2009,10 +2123,7 @@ export default function RingLabPage() {
           </button>
         ) : ropeThrowTest.phase === 'choose-direction' ? (
           <>
-            <strong>ロープスロー方向</strong>
-            {ROPE_THROW_DIRECTIONS.map(({ facing, label }) => (
-              <button key={facing} onClick={() => chooseRopeThrowDirection(facing)} type="button">{label}</button>
-            ))}
+            <strong>盤面の色が付いたマスを選択</strong>
             <button className="is-subtle" onClick={cancelRopeThrowTest} type="button">戻る</button>
           </>
         ) : phaseLocksBoard ? (
