@@ -624,10 +624,10 @@ function WrestlerCube({
   // whole visual layer so the feet land at the centre of the isometric cell;
   // the wrapper itself remains at the original board coordinate.
   const spriteTransform: Record<RingSide, string> = {
-    'right-back': 'translate(7px, -19px)',
-    'right-front': 'translate(-7px, -19px)',
-    'left-front': 'translate(10px, -16px)',
-    'left-back': 'translate(-6px, -15px)',
+    'right-back': 'translate(7px, -10px)',
+    'right-front': 'translate(-7px, -10px)',
+    'left-front': 'translate(10px, -8px)',
+    'left-back': 'translate(-6px, -8px)',
   };
 
   return (
