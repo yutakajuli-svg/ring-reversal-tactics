@@ -18,8 +18,9 @@
 .cube-study { order: 3; }
 .match-message { order: 4; }
 .fighter-hud--player { order: 5; }
-.lab-console { order: 6; }
-.coordinate-atlas { order: 7; }
+.game-action-controls { order: 6; }
+.lab-console { order: 7; }
+.coordinate-atlas { order: 8; }
 
 .ring-lab-titlebar {
   display: flex;
@@ -121,6 +122,7 @@
   width: 100%;
   height: 100%;
   background: currentColor;
+  transition: width 220ms ease;
 }
 
 .fighter-hud__body small {
@@ -157,6 +159,67 @@
   color: #f1f1f1;
 }
 
+.match-message em {
+  margin-left: auto;
+  padding: 3px 7px;
+  border: 1px solid #f2bf43;
+  color: #f2bf43;
+  font: 800 13px/1 "Courier New", monospace;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.game-action-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  width: min(100%, 900px);
+  margin: 0 auto 8px;
+  padding: 10px;
+  border: 2px solid #555;
+  background: #111;
+  box-shadow: 5px 5px 0 #000;
+}
+
+.game-action-controls button,
+.game-action-controls > strong {
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 2px solid #777;
+  color: #fff;
+  background: #242424;
+  font: 800 14px/1.15 "Yu Gothic UI", sans-serif;
+}
+
+.game-action-controls button {
+  cursor: pointer;
+}
+
+.game-action-controls button:hover {
+  border-color: #f2bf43;
+  color: #f2bf43;
+}
+
+.game-action-controls .rope-action {
+  border-color: #f2bf43;
+  color: #161005;
+  background: #f2bf43;
+}
+
+.game-action-controls .is-subtle {
+  color: #bbb;
+  background: #151515;
+}
+
+.game-action-controls > strong {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  border-color: #236dff;
+  color: #72a0ff;
+  letter-spacing: .15em;
+}
+
 .lab-console {
   width: min(100%, 900px);
   margin: 14px auto 0;
@@ -170,6 +233,65 @@
   color: #888;
   font-size: 11px;
   letter-spacing: .18em;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.lab-console:not([open]) {
+  padding-block: 10px 4px;
+}
+
+.lab-console:not([open]) .lab-console__label {
+  margin-bottom: 0;
+}
+
+.movement-controls .end-turn-button {
+  border-color: #f2bf43;
+  color: #17130a;
+  background: #f2bf43;
+  font-weight: 800;
+}
+
+.match-result {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #000d;
+}
+
+.match-result > div {
+  width: min(100%, 430px);
+  padding: 34px 24px;
+  border: 4px double #f2bf43;
+  color: #fff;
+  background: #141414;
+  box-shadow: 10px 10px 0 #000;
+  text-align: center;
+}
+
+.match-result p {
+  margin: 0;
+  color: #f2bf43;
+  font-size: 13px;
+  letter-spacing: .2em;
+}
+
+.match-result h2 {
+  margin: 12px 0 22px;
+  font-size: clamp(36px, 10vw, 64px);
+}
+
+.match-result button {
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 2px solid #fff;
+  color: #080808;
+  background: #f2bf43;
+  font: 800 15px/1 "Yu Gothic UI", sans-serif;
+  cursor: pointer;
 }
 
 .movement-controls {
@@ -402,6 +524,27 @@
   filter: brightness(1.25);
 }
 
+.tile-cube.is-move-reachable .cube-top,
+.corner-cube.is-move-reachable .cube-top {
+  background: #50d9ad;
+  filter: brightness(1.08);
+}
+
+.ringside-tile.is-move-reachable {
+  border-color: #d9fff1;
+  background: #50d9ad;
+  box-shadow: 0 0 13px #50d9ad99;
+}
+
+.tile-cube.is-move-reachable .cube-top,
+.ringside-tile.is-move-reachable {
+  animation: move-cell-pulse 1.15s ease-in-out infinite alternate;
+}
+
+@keyframes move-cell-pulse {
+  to { filter: brightness(1.22); }
+}
+
 .corner-access-target,
 .corner-top-access-target,
 .ring-access-target,
@@ -499,6 +642,40 @@
   letter-spacing: .08em;
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+.piece-turn-controls {
+  position: absolute;
+  display: flex;
+  justify-content: space-between;
+  width: 150px;
+  height: 44px;
+  transform: translate(-50%, 34px);
+  pointer-events: none;
+}
+
+.piece-turn-controls button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 2px solid #f2bf43;
+  border-radius: 50%;
+  color: #f2bf43;
+  background: #0c0c0eee;
+  box-shadow: 3px 3px 0 #000;
+  font: 800 25px/1 sans-serif;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.piece-turn-controls button:hover {
+  color: #111;
+  background: #f2bf43;
+}
+
+.piece-turn-controls button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
 }
 
 /* The foreground post and a wrestler standing on its top share one visual
@@ -962,6 +1139,86 @@
 }
 
 @media (max-width: 680px) {
+  .ring-lab {
+    padding: 10px 7px 28px;
+  }
+
+  .ring-lab-titlebar {
+    margin-bottom: 7px;
+  }
+
+  .ring-lab-titlebar p {
+    font-size: 9px;
+    letter-spacing: .1em;
+  }
+
+  .ring-lab-titlebar h1 {
+    font-size: 25px;
+  }
+
+  .ring-lab-titlebar > strong {
+    font-size: 10px;
+  }
+
+  .fighter-hud {
+    min-height: 78px;
+  }
+
+  .fighter-hud__portrait {
+    width: 72px;
+    flex-basis: 72px;
+    font-size: 30px;
+  }
+
+  .fighter-hud__body {
+    padding: 7px 8px;
+  }
+
+  .fighter-hud__body > strong {
+    font-size: 14px;
+  }
+
+  .fighter-hud__body small {
+    font-size: 10px;
+  }
+
+  .match-message {
+    align-items: flex-start;
+    gap: 3px;
+    margin-top: -2px;
+    font-size: 13px;
+  }
+
+  .match-message em {
+    margin-left: 0;
+  }
+
+  .game-action-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 7px;
+  }
+
+  .game-action-controls button {
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  .lab-console {
+    padding: 8px 6px;
+  }
+
+  .movement-controls button,
+  .facing-controls button,
+  .rope-throw-controls button,
+  .attack-test-controls button,
+  .down-recovery-controls button,
+  .turn-skip-controls button,
+  .board-rotation-controls button,
+  .visibility-controls button {
+    min-height: 42px;
+    padding: 7px 10px;
+  }
+
   .cube-board {
     transform: translateX(-50%) scale(.7);
     transform-origin: top center;
