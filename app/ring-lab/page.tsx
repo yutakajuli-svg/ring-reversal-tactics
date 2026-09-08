@@ -679,8 +679,8 @@ function MenkoAttackIcon() {
     const context = icon?.getContext('2d');
     if (!icon || !context) return;
 
-    // This is the same 24px monochrome fist conversion used by MENKO
-    // ENDURANCE, so both games keep the same attack symbol on each device.
+    // Keep the MENKO fist silhouette, but use the ring UI's gold accent and a
+    // dedicated dark outline so it stays legible inside a white speech bubble.
     const source = document.createElement('canvas');
     source.width = 96;
     source.height = 96;
@@ -701,6 +701,16 @@ function MenkoAttackIcon() {
     const pixels = sampleContext.getImageData(0, 0, 24, 24).data;
 
     context.clearRect(0, 0, 24, 24);
+    context.fillStyle = '#111';
+    for (let y = 0; y < 24; y += 1) {
+      for (let x = 0; x < 24; x += 1) {
+        const offset = (y * 24 + x) * 4;
+        const alpha = pixels[offset + 3] / 255;
+        if (alpha < .08) continue;
+        context.globalAlpha = alpha;
+        context.fillRect(x - 1, y - 1, 3, 3);
+      }
+    }
     for (let y = 0; y < 24; y += 1) {
       for (let x = 0; x < 24; x += 1) {
         const offset = (y * 24 + x) * 4;
@@ -712,7 +722,7 @@ function MenkoAttackIcon() {
           + pixels[offset + 2] * .0722
         ) / 255;
         context.globalAlpha = alpha;
-        context.fillStyle = lightness >= .68 ? '#fff' : lightness >= .3 ? '#969696' : '#000';
+        context.fillStyle = lightness >= .68 ? '#ffe79a' : lightness >= .3 ? '#f6c443' : '#8c5a00';
         context.fillRect(x, y, 1, 1);
       }
     }
@@ -1493,7 +1503,7 @@ export default function RingLabPage() {
           setCpuActionCue(null);
           setIsCpuThinking(false);
           advanceTurn('blue');
-        }, 760);
+        }, 1500);
         return;
       } else {
         setAttackTest({ phase: 'idle', message: 'BLUEは2マス以内で距離を詰めました。' });
