@@ -1978,9 +1978,9 @@ export default function RingLabPage() {
                 onClick={() => setActiveFacing(turnFacing(wrestlers.red.facing, -1))}
                 type="button"
               >
-                <svg aria-hidden="true" viewBox="0 0 32 32">
-                  <path d="M19 7H10v9" />
-                  <path d="M10.5 7.5a10 10 0 1 0 13 2" />
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
                 </svg>
               </button>
               <button
@@ -1989,9 +1989,9 @@ export default function RingLabPage() {
                 onClick={() => setActiveFacing(turnFacing(wrestlers.red.facing, 1))}
                 type="button"
               >
-                <svg aria-hidden="true" viewBox="0 0 32 32">
-                  <path d="M13 7h9v9" />
-                  <path d="M21.5 7.5a10 10 0 1 1-13 2" />
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
                 </svg>
               </button>
             </div>
