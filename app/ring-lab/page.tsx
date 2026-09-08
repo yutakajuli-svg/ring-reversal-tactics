@@ -63,12 +63,6 @@ type BoardLocation =
   | { area: 'corner'; row: number; column: number }
   | { area: 'ringside'; row: number; column: number };
 
-const TOKEN_DESTINATIONS: Record<'ring' | 'corner' | 'ringside', BoardLocation> = {
-  ring: { area: 'ring', row: 3, column: 0 },
-  corner: { area: 'corner', row: 6, column: 0 },
-  ringside: { area: 'ringside', row: 6, column: -1 },
-};
-
 const HIDDEN_RINGSIDE_DESTINATION: BoardLocation = {
   area: 'ringside',
   // C1: the far-side mat behind the default B2 red corner.
@@ -111,8 +105,9 @@ const ROPE_THROW_DIRECTIONS = [
 }[];
 
 const INITIAL_WRESTLERS: Record<WrestlerId, WrestlerState> = {
-  red: { location: TOKEN_DESTINATIONS.ring, facing: 'left-front', stance: 'standing' },
-  blue: { location: { area: 'ring', row: 0, column: 3 }, facing: 'left-front', stance: 'standing' },
+  // D5 and F5: both wrestlers begin near center with E5 between them.
+  red: { location: { area: 'ring', row: 3, column: 2 }, facing: 'right-front', stance: 'standing' },
+  blue: { location: { area: 'ring', row: 3, column: 4 }, facing: 'left-back', stance: 'standing' },
 };
 
 // There are only two camera views: the normal view and its 180° opposite.
