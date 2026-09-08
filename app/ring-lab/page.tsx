@@ -277,18 +277,33 @@ function sameAreaLandingCandidates(
   return candidates;
 }
 
-function ropeThrowGeometry(attacker: BoardLocation, direction: RingSide) {
+function ropeThrowGeometry(attacker: BoardLocation, direction: RingSide, defender?: BoardLocation) {
   if (attacker.area !== 'ring') return null;
   const vector = ROPE_THROW_DIRECTIONS.find(({ facing }) => facing === direction)!;
   const frontRow = attacker.row + vector.row;
   const frontColumn = attacker.column + vector.column;
 
+  // When the defender is already against the selected rope, the outward throw
+  // begins from their square rather than the attacker's square.
+  const defenderOutRow = defender?.area === 'ring' ? defender.row + vector.row : null;
+  const defenderOutColumn = defender?.area === 'ring' ? defender.column + vector.column : null;
+  const defenderFallsOut = defenderOutRow !== null
+    && defenderOutColumn !== null
+    && (defenderOutRow < 0
+      || defenderOutRow >= SIZE
+      || defenderOutColumn < 0
+      || defenderOutColumn >= SIZE);
+
   // Throwing outward from a rope-side square sends the defender directly to
   // ringside. There is no return or interception phase after a fall.
-  if (frontRow < 0 || frontRow >= SIZE || frontColumn < 0 || frontColumn >= SIZE) {
+  if (defenderFallsOut || frontRow < 0 || frontRow >= SIZE || frontColumn < 0 || frontColumn >= SIZE) {
     return {
       fellOut: true as const,
-      destination: { area: 'ringside', row: frontRow, column: frontColumn } as BoardLocation,
+      destination: {
+        area: 'ringside',
+        row: defenderFallsOut ? defenderOutRow : frontRow,
+        column: defenderFallsOut ? defenderOutColumn : frontColumn,
+      } as BoardLocation,
       edge: vector.edge,
     };
   }
@@ -380,9 +395,9 @@ function ringsideThrowGeometry(attacker: BoardLocation, direction: RingSide) {
   };
 }
 
-function ropeDirectionTarget(attacker: BoardLocation, direction: RingSide) {
+function ropeDirectionTarget(attacker: BoardLocation, direction: RingSide, defender?: BoardLocation) {
   if (attacker.area === 'ring') {
-    const geometry = ropeThrowGeometry(attacker, direction);
+    const geometry = ropeThrowGeometry(attacker, direction, defender);
     if (!geometry) return null;
     if (geometry.fellOut) return { location: geometry.destination, kind: 'outside' as const };
     if (geometry.cornerImpact) return { location: geometry.cornerLocation, kind: 'corner' as const };
@@ -895,7 +910,7 @@ export default function RingLabPage() {
       return;
     }
 
-    const geometry = ropeThrowGeometry(attackerLocation, direction);
+    const geometry = ropeThrowGeometry(attackerLocation, direction, wrestlers[defender].location);
     if (!geometry) return;
 
     setRopeThrowTest({ phase: 'travelling', attacker, defender, direction, outcome });
@@ -1484,7 +1499,11 @@ export default function RingLabPage() {
     : '';
   const ropeDirectionTargets = ropeThrowTest.phase === 'choose-direction'
     ? ROPE_THROW_DIRECTIONS.flatMap(({ facing, label }) => {
-        const target = ropeDirectionTarget(wrestlers[ropeThrowTest.attacker].location, facing);
+        const target = ropeDirectionTarget(
+          wrestlers[ropeThrowTest.attacker].location,
+          facing,
+          wrestlers[ropeThrowTest.defender].location,
+        );
         return target ? [{ facing, label, ...target }] : [];
       })
     : [];
@@ -1959,7 +1978,10 @@ export default function RingLabPage() {
                 onClick={() => setActiveFacing(turnFacing(wrestlers.red.facing, -1))}
                 type="button"
               >
-                ↶
+                <svg aria-hidden="true" viewBox="0 0 32 32">
+                  <path d="M19 7H10v9" />
+                  <path d="M10.5 7.5a10 10 0 1 0 13 2" />
+                </svg>
               </button>
               <button
                 aria-label="右へ90度回転"
@@ -1967,7 +1989,10 @@ export default function RingLabPage() {
                 onClick={() => setActiveFacing(turnFacing(wrestlers.red.facing, 1))}
                 type="button"
               >
-                ↷
+                <svg aria-hidden="true" viewBox="0 0 32 32">
+                  <path d="M13 7h9v9" />
+                  <path d="M21.5 7.5a10 10 0 1 1-13 2" />
+                </svg>
               </button>
             </div>
           )}
