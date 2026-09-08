@@ -671,6 +671,57 @@ function WrestlerCube({
   );
 }
 
+function MenkoAttackIcon() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const icon = canvasRef.current;
+    const context = icon?.getContext('2d');
+    if (!icon || !context) return;
+
+    // This is the same 24px monochrome fist conversion used by MENKO
+    // ENDURANCE, so both games keep the same attack symbol on each device.
+    const source = document.createElement('canvas');
+    source.width = 96;
+    source.height = 96;
+    const sourceContext = source.getContext('2d', { willReadFrequently: true });
+    if (!sourceContext) return;
+    sourceContext.font = '72px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+    sourceContext.textAlign = 'center';
+    sourceContext.textBaseline = 'middle';
+    sourceContext.fillText('\u{1F91C}', 48, 51);
+
+    const sample = document.createElement('canvas');
+    sample.width = 24;
+    sample.height = 24;
+    const sampleContext = sample.getContext('2d', { willReadFrequently: true });
+    if (!sampleContext) return;
+    sampleContext.imageSmoothingEnabled = true;
+    sampleContext.drawImage(source, 0, 0, 24, 24);
+    const pixels = sampleContext.getImageData(0, 0, 24, 24).data;
+
+    context.clearRect(0, 0, 24, 24);
+    for (let y = 0; y < 24; y += 1) {
+      for (let x = 0; x < 24; x += 1) {
+        const offset = (y * 24 + x) * 4;
+        const alpha = pixels[offset + 3] / 255;
+        if (alpha < .08) continue;
+        const lightness = (
+          pixels[offset] * .2126
+          + pixels[offset + 1] * .7152
+          + pixels[offset + 2] * .0722
+        ) / 255;
+        context.globalAlpha = alpha;
+        context.fillStyle = lightness >= .68 ? '#fff' : lightness >= .3 ? '#969696' : '#000';
+        context.fillRect(x, y, 1, 1);
+      }
+    }
+    context.globalAlpha = 1;
+  }, []);
+
+  return <canvas aria-hidden="true" height="24" ref={canvasRef} width="24" />;
+}
+
 export default function RingLabPage() {
   const [wrestlers, setWrestlers] = useState<Record<WrestlerId, WrestlerState>>(INITIAL_WRESTLERS);
   const [activeWrestler, setActiveWrestler] = useState<WrestlerId>('red');
@@ -680,6 +731,7 @@ export default function RingLabPage() {
   const [matchWinner, setMatchWinner] = useState<WrestlerId | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [isCpuThinking, setIsCpuThinking] = useState(false);
+  const [cpuActionCue, setCpuActionCue] = useState<'attack' | null>(null);
   const [lastRoll, setLastRoll] = useState<number | null>(null);
   const [gameMessage, setGameMessage] = useState('緑色の移動可能マスを選んでください。');
   const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
@@ -757,6 +809,7 @@ export default function RingLabPage() {
     setMatchWinner(null);
     setDebugMode(false);
     setIsCpuThinking(false);
+    setCpuActionCue(null);
     setLastRoll(null);
     setGameMessage('緑色の移動可能マスを選んでください。');
     setBoardRotation(0);
@@ -1345,6 +1398,7 @@ export default function RingLabPage() {
       debugMode
       || activeWrestler !== 'blue'
       || matchWinner
+      || cpuActionCue !== null
       || ropeThrowTest.phase !== 'idle'
       || attackTest.phase !== 'idle'
     ) {
@@ -1428,11 +1482,19 @@ export default function RingLabPage() {
       }));
       if (die !== null) {
         setLastRoll(die);
-        if (die >= 4) registerHit('red');
-        setAttackTest({
-          phase: 'idle',
-          message: `BLUE STRIKE ${die >= 4 ? 'HIT' : 'MISS'}。D6=${die}`,
-        });
+        setCpuActionCue('attack');
+        setGameMessage('BLUEが攻撃を仕掛けます。');
+        queueRopeThrowStep(() => {
+          if (die >= 4) registerHit('red');
+          setAttackTest({
+            phase: 'idle',
+            message: `BLUE STRIKE ${die >= 4 ? 'HIT' : 'MISS'}。D6=${die}`,
+          });
+          setCpuActionCue(null);
+          setIsCpuThinking(false);
+          advanceTurn('blue');
+        }, 760);
+        return;
       } else {
         setAttackTest({ phase: 'idle', message: 'BLUEは2マス以内で距離を詰めました。' });
       }
@@ -1445,6 +1507,7 @@ export default function RingLabPage() {
     activeWrestler,
     attackTest.phase,
     boardRotation,
+    cpuActionCue,
     debugMode,
     downRecovery.blue,
     matchWinner,
@@ -2008,6 +2071,16 @@ export default function RingLabPage() {
               && isTransparentCorner(wrestlers.blue.location.row, wrestlers.blue.location.column, boardRotation)
             }
           />
+          {cpuActionCue === 'attack' && (
+            <div
+              aria-label="CPUの行動予告：攻撃"
+              className="cpu-action-bubble"
+              role="status"
+              style={{ ...boardPosition(wrestlers.blue.location, boardRotation), zIndex: 148 }}
+            >
+              <MenkoAttackIcon />
+            </div>
+          )}
           {/* The ring's near apron is a separate visual surface. It can cover
               only the lower part of a piece at the edge without making that
               cell unavailable or changing the piece's board coordinate. */}

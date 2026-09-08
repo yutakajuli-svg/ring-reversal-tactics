@@ -744,6 +744,48 @@
   cursor: not-allowed;
 }
 
+.cpu-action-bubble {
+  position: absolute;
+  display: grid;
+  width: 52px;
+  height: 42px;
+  place-items: center;
+  border: 3px solid #111;
+  border-radius: 50%;
+  color: #111;
+  background: #fff;
+  box-shadow: 3px 4px 0 #0008;
+  transform: translate(-50%, -48px);
+  pointer-events: none;
+  animation: cpu-action-pop .18s ease-out both;
+}
+
+.cpu-action-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 13px;
+  height: 13px;
+  border-right: 3px solid #111;
+  border-bottom: 3px solid #111;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.cpu-action-bubble canvas {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+@keyframes cpu-action-pop {
+  from { opacity: 0; transform: translate(-50%, -40px) scale(.75); }
+  to { opacity: 1; transform: translate(-50%, -48px) scale(1); }
+}
+
 /* The foreground post and a wrestler standing on its top share one visual
    layer. Keeping their opacity together preserves the height relationship. */
 .corner-cube.is-translucent,
