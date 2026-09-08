@@ -179,6 +179,24 @@ function oppositeFacing(facing: RingSide): RingSide {
   return TURN_ORDER[(TURN_ORDER.indexOf(facing) + 2) % TURN_ORDER.length];
 }
 
+function turnFacing(facing: RingSide, amount: -1 | 1): RingSide {
+  const index = TURN_ORDER.indexOf(facing);
+  return TURN_ORDER[(index + amount + TURN_ORDER.length) % TURN_ORDER.length];
+}
+
+function facingToward(from: BoardLocation, to: BoardLocation): RingSide {
+  const rowDistance = to.row - from.row;
+  const columnDistance = to.column - from.column;
+  if (Math.abs(columnDistance) > Math.abs(rowDistance)) {
+    return columnDistance > 0 ? 'right-front' : 'left-back';
+  }
+  return rowDistance > 0 ? 'left-front' : 'right-back';
+}
+
+function rollD6() {
+  return Math.floor(Math.random() * 6) + 1;
+}
+
 function locationHeight(location: BoardLocation) {
   return location.area === 'ringside' ? 0 : location.area === 'ring' ? 1 : 2;
 }
@@ -563,6 +581,14 @@ function WrestlerCube({
 export default function RingLabPage() {
   const [wrestlers, setWrestlers] = useState<Record<WrestlerId, WrestlerState>>(INITIAL_WRESTLERS);
   const [activeWrestler, setActiveWrestler] = useState<WrestlerId>('red');
+  const [hits, setHits] = useState<Record<WrestlerId, number>>({ red: 0, blue: 0 });
+  const [turnNumber, setTurnNumber] = useState(1);
+  const [hasMoved, setHasMoved] = useState(false);
+  const [matchWinner, setMatchWinner] = useState<WrestlerId | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
+  const [isCpuThinking, setIsCpuThinking] = useState(false);
+  const [lastRoll, setLastRoll] = useState<number | null>(null);
+  const [gameMessage, setGameMessage] = useState('緑色の移動可能マスを選んでください。');
   const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
   const [showVisibilityMap, setShowVisibilityMap] = useState(false);
   const [visibilityMarks, setVisibilityMarks] = useState<Record<string, VisibilityMark>>({});
@@ -593,6 +619,14 @@ export default function RingLabPage() {
     ropeThrowTimers.current.forEach((timer) => window.clearTimeout(timer));
   }, []);
 
+  useEffect(() => {
+    if (attackTest.phase === 'idle') setGameMessage(attackTest.message);
+  }, [attackTest]);
+
+  useEffect(() => {
+    if (ropeThrowTest.phase === 'idle') setGameMessage(ropeThrowTest.message);
+  }, [ropeThrowTest]);
+
   const queueRopeThrowStep = (callback: () => void, delay: number) => {
     const timer = window.setTimeout(callback, delay);
     ropeThrowTimers.current.push(timer);
@@ -602,14 +636,54 @@ export default function RingLabPage() {
     setBoardRotation((current) => (current === 0 ? 2 : 0));
   };
 
-  const actionLocksBoard = ropeThrowTest.phase !== 'idle' || attackTest.phase !== 'idle';
+  const phaseLocksBoard = matchWinner !== null || ropeThrowTest.phase !== 'idle' || attackTest.phase !== 'idle';
+  const actionLocksBoard = phaseLocksBoard || isCpuThinking || (!debugMode && activeWrestler === 'blue');
+
+  const advanceTurn = (actor: WrestlerId) => {
+    setActiveWrestler(otherWrestler(actor));
+    setHasMoved(false);
+    setTurnNumber((current) => current + 1);
+  };
+
+  const registerHit = (victim: WrestlerId) => {
+    setHits((current) => {
+      const next = { ...current, [victim]: Math.min(3, current[victim] + 1) };
+      if (next[victim] >= 3) setMatchWinner(otherWrestler(victim));
+      return next;
+    });
+  };
+
+  const resetMatch = () => {
+    ropeThrowTimers.current.forEach((timer) => window.clearTimeout(timer));
+    ropeThrowTimers.current = [];
+    setWrestlers(INITIAL_WRESTLERS);
+    setActiveWrestler('red');
+    setHits({ red: 0, blue: 0 });
+    setTurnNumber(1);
+    setHasMoved(false);
+    setMatchWinner(null);
+    setDebugMode(false);
+    setIsCpuThinking(false);
+    setLastRoll(null);
+    setGameMessage('緑色の移動可能マスを選んでください。');
+    setBoardRotation(0);
+    setPendingTurnSkip({ red: false, blue: false });
+    setDownRecovery({ red: null, blue: null });
+    setRopeAnimation({ run: 0, edge: null });
+    setRopeThrowTest({ phase: 'idle', message: '赤コーナーから試合開始です。' });
+    setAttackTest({ phase: 'idle', message: '移動後、向きと行動を選択してください。' });
+  };
 
   const focusWrestler = (id: WrestlerId) => {
-    if (!actionLocksBoard) setActiveWrestler(id);
+    if (!actionLocksBoard && (debugMode || id === activeWrestler)) setActiveWrestler(id);
   };
 
   const moveActiveWrestler = (location: BoardLocation) => {
     if (actionLocksBoard) return;
+    if (hasMoved) {
+      setAttackTest({ phase: 'idle', message: 'このターンの移動は完了しています。行動するか、ターンを終了してください。' });
+      return;
+    }
     if (pendingTurnSkip[activeWrestler]) {
       setRopeThrowTest({
         phase: 'idle',
@@ -623,6 +697,11 @@ export default function RingLabPage() {
     }
     const otherId = otherWrestler(activeWrestler);
     const from = wrestlers[activeWrestler].location;
+    const moveDistance = Math.max(Math.abs(from.row - location.row), Math.abs(from.column - location.column));
+    if (moveDistance > 2) {
+      setAttackTest({ phase: 'idle', message: '1ターンの移動は2マスまでです。' });
+      return;
+    }
     if (
       wrestlers[activeWrestler].stance === 'down'
       && Math.abs(from.row - location.row) + Math.abs(from.column - location.column) > 1
@@ -642,6 +721,8 @@ export default function RingLabPage() {
       ...current,
       [activeWrestler]: { ...current[activeWrestler], location },
     }));
+    setHasMoved(true);
+    setGameMessage('移動完了。コマ横の回転ボタンで向きを決め、行動を選んでください。');
     setBoardRotation((current) => rotationAfterMove(current, from, location, wrestlers[otherId].location));
   };
 
@@ -662,6 +743,7 @@ export default function RingLabPage() {
       ...current,
       [activeWrestler]: { ...current[activeWrestler], facing },
     }));
+    setGameMessage('向きを変更しました。行動を選んでください。');
   };
 
   const beginRopeThrowTest = () => {
@@ -721,7 +803,7 @@ export default function RingLabPage() {
           destination,
           wrestlers[otherWrestler(affected)].location,
         ));
-        setActiveWrestler(outcome === 'success' ? attacker : defender);
+        if (geometry.kind !== 'ring-return') registerHit(affected);
         const message = geometry.kind === 'corner-impact'
           ? `${outcome === 'success' ? '成功' : '失敗'}。${affectedLabel}がコーナーポストへ衝突し、その場でダメージ。`
           : geometry.kind === 'ring-return'
@@ -730,6 +812,7 @@ export default function RingLabPage() {
               ? `${outcome === 'success' ? '成功' : '失敗'}。${affectedLabel}が場外列の端まで強制移動し、鉄柵ダメージ。`
               : `${outcome === 'success' ? '成功' : '失敗'}。${affectedLabel}がその場で鉄柵ダメージ。`;
         setRopeThrowTest({ phase: 'idle', message });
+        advanceTurn(attacker);
       }, 320);
       return;
     }
@@ -756,13 +839,13 @@ export default function RingLabPage() {
           wrestlers[otherWrestler(affected)].location,
         ));
         setPendingTurnSkip((current) => ({ ...current, [affected]: true }));
-        setActiveWrestler(outcome === 'success' ? attacker : defender);
         setRopeThrowTest({
           phase: 'idle',
           message: outcome === 'success'
             ? 'ロープスロー成功。相手が場外へ落下し、次の自分のターンは行動不能です。'
             : 'ロープスロー失敗。実行側が場外へ落下し、次の自分のターンは行動不能です。',
         });
+        advanceTurn(attacker);
       }, 320);
       return;
     }
@@ -787,6 +870,8 @@ export default function RingLabPage() {
 
       if (outcome === 'success') {
         setActiveWrestler(attacker);
+        setHasMoved(true);
+        setTurnNumber((current) => current + 1);
         setRopeThrowTest({
           phase: 'awaiting-intercept',
           attacker,
@@ -796,11 +881,11 @@ export default function RingLabPage() {
           ropeLocation: geometry.ropeLocation,
         });
       } else {
-        setActiveWrestler(defender);
         setRopeThrowTest({
           phase: 'idle',
           message: 'ロープスローを切り返しました。投げられた側がロープ際から自由に移動・行動できます。',
         });
+        advanceTurn(attacker);
       }
     }, 320);
   };
@@ -826,7 +911,9 @@ export default function RingLabPage() {
           ? '迎撃失敗。ロープスローを実行した側にダメージ。'
           : '迎撃を見送り。両者ノーダメージで正面1マスに戻りました。';
       setRopeThrowTest({ phase: 'idle', message });
-      setActiveWrestler(attacker);
+      if (outcome === 'hit') registerHit(defender);
+      if (outcome === 'miss') registerHit(attacker);
+      advanceTurn(attacker);
     }, 320);
   };
 
@@ -841,6 +928,7 @@ export default function RingLabPage() {
       phase: 'idle',
       message: `${id === 'red' ? '赤' : '青'}コマの行動不能ターンを消化しました。次のターンから行動できます。`,
     });
+    advanceTurn(id);
   };
 
   const attackLabel = (kind: AttackKind) => ({
@@ -943,13 +1031,16 @@ export default function RingLabPage() {
       ? cornerTopAttackVector(attackerState.location, defenderState.location) ?? directionVector(attackerState.facing)
       : directionVector(attackerState.facing);
     let message = '';
+    let damaged: WrestlerId | null = null;
 
     if (kind === 'strike') {
       message = outcome === 'success' ? '通常打撃成功。相手にダメージ。' : '通常打撃失敗。空振りで両者ノーダメージ。';
+      if (outcome === 'success') damaged = defender;
     } else if (kind === 'knockback') {
       if (outcome === 'failure') {
         message = 'ノックバック攻撃失敗。空振りで移動・ダメージなし。';
       } else {
+        damaged = defender;
         const destination = locationForWorldCell(
           defenderState.location.row + vector.row,
           defenderState.location.column + vector.column,
@@ -969,6 +1060,7 @@ export default function RingLabPage() {
       }
     } else if (kind === 'swap') {
       if (outcome === 'success') {
+        damaged = defender;
         setWrestlers((current) => ({
           ...current,
           [attacker]: {
@@ -984,6 +1076,7 @@ export default function RingLabPage() {
         }));
         message = '入れ替え投げ成功。両者の位置を交換し、互いに向き合って相手にダメージ。';
       } else {
+        damaged = attacker;
         setWrestlers((current) => ({
           ...current,
           [attacker]: {
@@ -1010,6 +1103,7 @@ export default function RingLabPage() {
       if (!attackerLanding) {
         message = '着地点がなく、飛び技を解決できませんでした。';
       } else {
+        damaged = outcome === 'success' ? defender : attacker;
         setWrestlers((current) => ({
           ...current,
           [attacker]: { ...current[attacker], location: attackerLanding },
@@ -1028,6 +1122,7 @@ export default function RingLabPage() {
       if (outcome === 'failure') {
         message = '引きずり落とし失敗。位置変化・ダメージなし。';
       } else {
+        damaged = defender;
         const candidates = sameAreaLandingCandidates(defenderState.location, attackerState.location.area as 'ring' | 'ringside', [attackerState.location]);
         const destination = randomChoice(candidates);
         setWrestlers((current) => ({
@@ -1040,6 +1135,7 @@ export default function RingLabPage() {
         message = `引きずり落とし成功。相手を${locationLabel(destination)}へ落下させました。`;
       }
     } else if (outcome === 'success') {
+      damaged = defender;
       setWrestlers((current) => ({
         ...current,
         [defender]: { ...current[defender], stance: 'down' },
@@ -1051,6 +1147,8 @@ export default function RingLabPage() {
     }
 
     setAttackTest({ phase: 'idle', message });
+    if (damaged) registerHit(damaged);
+    advanceTurn(attacker);
   };
 
   const cancelAttackTest = () => {
@@ -1076,6 +1174,143 @@ export default function RingLabPage() {
     });
   };
 
+  useEffect(() => {
+    if (debugMode) return;
+    if (attackTest.phase === 'choose-result') {
+      const die = rollD6();
+      setLastRoll(die);
+      const timer = window.setTimeout(() => resolveAttackTest(die >= 4 ? 'success' : 'failure'), 520);
+      return () => window.clearTimeout(timer);
+    }
+    if (ropeThrowTest.phase === 'choose-result') {
+      const die = rollD6();
+      setLastRoll(die);
+      const timer = window.setTimeout(() => executeRopeThrowTest(die >= 4 ? 'success' : 'failure'), 520);
+      return () => window.clearTimeout(timer);
+    }
+    if (ropeThrowTest.phase === 'awaiting-intercept') {
+      const die = rollD6();
+      setLastRoll(die);
+      const timer = window.setTimeout(() => resolveInterceptTest(die >= 4 ? 'hit' : 'miss'), 720);
+      return () => window.clearTimeout(timer);
+    }
+  }, [attackTest.phase, debugMode, ropeThrowTest.phase]);
+
+  useEffect(() => {
+    if (
+      debugMode
+      || activeWrestler !== 'blue'
+      || matchWinner
+      || ropeThrowTest.phase !== 'idle'
+      || attackTest.phase !== 'idle'
+    ) {
+      return;
+    }
+
+    setIsCpuThinking(true);
+    const timer = window.setTimeout(() => {
+      if (pendingTurnSkip.blue) {
+        setPendingTurnSkip((current) => ({ ...current, blue: false }));
+        setRopeThrowTest({ phase: 'idle', message: 'BLUEは場外落下による行動不能ターンです。' });
+        setIsCpuThinking(false);
+        advanceTurn('blue');
+        return;
+      }
+
+      if (wrestlers.blue.stance === 'down' && downRecovery.blue === 'pending') {
+        const recoveryRoll = rollD6();
+        setLastRoll(recoveryRoll);
+        if (recoveryRoll >= 4) {
+          setWrestlers((current) => ({ ...current, blue: { ...current.blue, stance: 'standing' } }));
+          setDownRecovery((current) => ({ ...current, blue: null }));
+          setAttackTest({ phase: 'idle', message: `BLUEは立ち上がりました。D6=${recoveryRoll}` });
+        } else {
+          setAttackTest({ phase: 'idle', message: `BLUEは立ち上がれず、ターン終了。D6=${recoveryRoll}` });
+        }
+        setIsCpuThinking(false);
+        advanceTurn('blue');
+        return;
+      }
+
+      const cpu = wrestlers.blue;
+      const player = wrestlers.red;
+      const playableLocations: BoardLocation[] = [
+        ...cubes.map(({ r, c }) => (
+          isCornerCell(r, c)
+            ? { area: 'corner', row: r, column: c } as BoardLocation
+            : { area: 'ring', row: r, column: c } as BoardLocation
+        )),
+        ...ringsideTiles
+          .filter(({ r, c }) => isRingsidePerimeter(r, c))
+          .map(({ r, c }) => ({ area: 'ringside', row: r - 1, column: c - 1 } as BoardLocation)),
+      ];
+
+      let destination = cpu.location;
+      const candidates = playableLocations
+        .filter((location) => {
+          const distance = Math.max(
+            Math.abs(cpu.location.row - location.row),
+            Math.abs(cpu.location.column - location.column),
+          );
+          return distance >= 1
+            && distance <= 2
+            && !isSameLocation(location, player.location)
+            && !isBlockedCornerMove(cpu.location, location, boardRotation);
+        })
+        .sort((left, right) => {
+          const leftDistance = Math.abs(left.row - player.location.row) + Math.abs(left.column - player.location.column);
+          const rightDistance = Math.abs(right.row - player.location.row) + Math.abs(right.column - player.location.column);
+          return leftDistance - rightDistance;
+        });
+
+      const currentFacing = facingToward(cpu.location, player.location);
+      const currentAttackDistance = forwardDistance(cpu.location, player.location, currentFacing);
+      const canAttackNow = locationHeight(cpu.location) === locationHeight(player.location)
+        && currentAttackDistance !== null
+        && currentAttackDistance >= 1
+        && currentAttackDistance <= 2;
+
+      if (!canAttackNow && candidates.length > 0) destination = candidates[0];
+
+      const facing = facingToward(destination, player.location);
+      const attackDistance = forwardDistance(destination, player.location, facing);
+      const canStrike = locationHeight(destination) === locationHeight(player.location)
+        && attackDistance !== null
+        && attackDistance >= 1
+        && attackDistance <= 2;
+      const die = canStrike ? rollD6() : null;
+
+      setWrestlers((current) => ({
+        ...current,
+        blue: { ...current.blue, location: destination, facing },
+      }));
+      if (die !== null) {
+        setLastRoll(die);
+        if (die >= 4) registerHit('red');
+        setAttackTest({
+          phase: 'idle',
+          message: `BLUE STRIKE ${die >= 4 ? 'HIT' : 'MISS'}。D6=${die}`,
+        });
+      } else {
+        setAttackTest({ phase: 'idle', message: 'BLUEは2マス以内で距離を詰めました。' });
+      }
+      setIsCpuThinking(false);
+      advanceTurn('blue');
+    }, 720);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    activeWrestler,
+    attackTest.phase,
+    boardRotation,
+    debugMode,
+    downRecovery.blue,
+    matchWinner,
+    pendingTurnSkip.blue,
+    ropeThrowTest.phase,
+    wrestlers,
+  ]);
+
   const cycleVisibilityMark = (key: string) => {
     const next: Record<VisibilityMark | 'clear', VisibilityMark | undefined> = {
       clear: 'visible',
@@ -1096,10 +1331,24 @@ export default function RingLabPage() {
 
   const activeLocation = wrestlers[activeWrestler].location;
   const otherLocation = wrestlers[otherWrestler(activeWrestler)].location;
+  const canControlActive = debugMode || activeWrestler === 'red';
+  const isMoveReachable = (location: BoardLocation) => {
+    const distance = Math.max(
+      Math.abs(activeLocation.row - location.row),
+      Math.abs(activeLocation.column - location.column),
+    );
+    return canControlActive
+      && !phaseLocksBoard
+      && !isCpuThinking
+      && !hasMoved
+      && !pendingTurnSkip[activeWrestler]
+      && distance >= 1
+      && distance <= (wrestlers[activeWrestler].stance === 'down' ? 1 : 2)
+      && !isSameLocation(location, otherLocation)
+      && !isBlockedCornerMove(activeLocation, location, boardRotation);
+  };
   const destinationIsBlocked = (location: BoardLocation) => (
-    actionLocksBoard
-    || isSameLocation(location, otherLocation)
-    || isBlockedCornerMove(activeLocation, location, boardRotation)
+    !isMoveReachable(location)
   );
   const reboundPreview = ropeThrowTest.phase === 'awaiting-intercept'
     ? reboundPath(ropeThrowTest.ropeLocation, ropeThrowTest.returnLocation, ropeThrowTest.direction)
@@ -1116,7 +1365,7 @@ export default function RingLabPage() {
           <p>WRESTLING TACTICS / RING LAB</p>
           <h1>RING MATCH</h1>
         </div>
-        <strong>ROUND TEST</strong>
+        <strong>TURN {turnNumber}</strong>
       </header>
 
       <section className="fighter-hud fighter-hud--cpu" aria-label="青コーナー選手情報">
@@ -1124,17 +1373,20 @@ export default function RingLabPage() {
         <div className="fighter-hud__body">
           <div className="fighter-hud__heading"><b>BLUE CORNER</b><span>CPU</span></div>
           <strong>BLUE WRESTLER</strong>
-          <div className="fighter-hud__meter"><i /></div>
-          <small>HIT <b>0 / 3</b>　STATUS {wrestlers.blue.stance === 'down' ? 'DOWN' : 'STANDING'}</small>
+          <div className="fighter-hud__meter"><i style={{ width: `${((3 - hits.blue) / 3) * 100}%` }} /></div>
+          <small>DAMAGE <b>{hits.blue} / 3</b>　STATUS {wrestlers.blue.stance === 'down' ? 'DOWN' : 'STANDING'}</small>
         </div>
       </section>
 
-      <div className="lab-console">
-        <p className="lab-console__label">TEST COMMAND</p>
+      <details
+        className="lab-console"
+        onToggle={(event) => setDebugMode(event.currentTarget.open)}
+      >
+        <summary className="lab-console__label">DEBUG / MANUAL TEST</summary>
       <div className="movement-controls" aria-label="行動する選手コマ">
         <button
           className={activeWrestler === 'red' ? 'is-active' : undefined}
-          disabled={actionLocksBoard}
+          disabled={actionLocksBoard || (!debugMode && activeWrestler !== 'red')}
           onClick={() => focusWrestler('red')}
           type="button"
         >
@@ -1142,11 +1394,19 @@ export default function RingLabPage() {
         </button>
         <button
           className={activeWrestler === 'blue' ? 'is-active' : undefined}
-          disabled={actionLocksBoard}
+          disabled={actionLocksBoard || (!debugMode && activeWrestler !== 'blue')}
           onClick={() => focusWrestler('blue')}
           type="button"
         >
           青コマを行動させる
+        </button>
+        <button
+          className="end-turn-button"
+          disabled={actionLocksBoard || pendingTurnSkip[activeWrestler]}
+          onClick={() => advanceTurn(activeWrestler)}
+          type="button"
+        >
+          {hasMoved ? '行動せずターン終了' : '待機してターン終了'}
         </button>
       </div>
       {(pendingTurnSkip.red || pendingTurnSkip.blue) && (
@@ -1289,7 +1549,7 @@ export default function RingLabPage() {
           {showCoordinateAtlas ? '3D座標見取り図を隠す' : '3D座標見取り図を表示'}
         </button>
       </div>
-      </div>
+      </details>
       <div className="cube-study" aria-label="立方体を七マスずつ並べたリングの土台">
         <div className="cube-board">
           {ringsideTiles.map(({ r, c }) => (
@@ -1309,7 +1569,7 @@ export default function RingLabPage() {
 
               return (
                 <button
-                  className="ringside-tile"
+                  className={`ringside-tile${isMoveReachable(location) ? ' is-move-reachable' : ''}`}
                   key={`ringside-${r}-${c}`}
                   aria-label={`場外 ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
                   disabled={destinationIsBlocked(location)}
@@ -1358,7 +1618,7 @@ export default function RingLabPage() {
               const rotated = rotateWorldCell(r, c, boardRotation);
               return (
                 <button
-                  className={`tile-cube${reboundPreviewKeys.has(`${r}-${c}`) ? ' is-rebound-path' : ''}${reboundTargetKey === `${r}-${c}` ? ' is-rebound-target' : ''}`}
+                  className={`tile-cube${isMoveReachable(location) ? ' is-move-reachable' : ''}${reboundPreviewKeys.has(`${r}-${c}`) ? ' is-rebound-path' : ''}${reboundTargetKey === `${r}-${c}` ? ' is-rebound-target' : ''}`}
                   key={`${r}-${c}`}
                   aria-label={`リング ${r + 1} 行 ${String.fromCharCode(65 + c)}`}
                   aria-disabled={isBlocked}
@@ -1390,7 +1650,7 @@ export default function RingLabPage() {
             const rotated = rotateWorldCell(r, c, boardRotation);
             return (
             <button
-              className={`tile-cube corner-cube ${colorClass}${translucent ? ' is-translucent' : ''}`}
+              className={`tile-cube corner-cube ${colorClass}${translucent ? ' is-translucent' : ''}${isMoveReachable(location) ? ' is-move-reachable' : ''}`}
               key={`corner-${r}-${c}`}
               aria-label="コーナー上へ移動"
               disabled={destinationIsBlocked(location)}
@@ -1537,6 +1797,29 @@ export default function RingLabPage() {
               && isTransparentCorner(wrestlers.red.location.row, wrestlers.red.location.column, boardRotation)
             }
           />
+          {activeWrestler === 'red' && !matchWinner && (
+            <div
+              className="piece-turn-controls"
+              style={{ ...boardPosition(wrestlers.red.location, boardRotation), zIndex: 145 }}
+            >
+              <button
+                aria-label="左へ90度回転"
+                disabled={actionLocksBoard}
+                onClick={() => setActiveFacing(turnFacing(wrestlers.red.facing, -1))}
+                type="button"
+              >
+                ↶
+              </button>
+              <button
+                aria-label="右へ90度回転"
+                disabled={actionLocksBoard}
+                onClick={() => setActiveFacing(turnFacing(wrestlers.red.facing, 1))}
+                type="button"
+              >
+                ↷
+              </button>
+            </div>
+          )}
           <WrestlerCube
             colorClass="corner-blue"
             down={wrestlers.blue.stance === 'down'}
@@ -1677,12 +1960,17 @@ export default function RingLabPage() {
       <section className="match-message" aria-live="polite">
         <b>{activeWrestler === 'red' ? 'RED' : 'BLUE'} TURN</b>
         <span>
-          {ropeThrowTest.phase !== 'idle'
-            ? 'ロープスローの方向と判定を選択してください。'
+          {isCpuThinking
+            ? 'BLUEが行動を考えています。'
+            : ropeThrowTest.phase === 'choose-direction'
+              ? 'ロープスローの方向を選択してください。'
+            : ropeThrowTest.phase !== 'idle'
+              ? 'ロープスローを判定しています。'
             : attackTest.phase !== 'idle'
-              ? `${attackLabel(attackTest.kind)}の成否を選択してください。`
-              : `${activeWrestler === 'red' ? '赤' : '青'}コマの移動先、または行動を選択してください。`}
+              ? `${attackLabel(attackTest.kind)}を判定しています。`
+              : gameMessage}
         </span>
+        {lastRoll !== null && <em>D6 {lastRoll}</em>}
       </section>
 
       <section className="fighter-hud fighter-hud--player" aria-label="赤コーナー選手情報">
@@ -1690,10 +1978,58 @@ export default function RingLabPage() {
         <div className="fighter-hud__body">
           <div className="fighter-hud__heading"><b>RED CORNER</b><span>PLAYER</span></div>
           <strong>RED WRESTLER</strong>
-          <div className="fighter-hud__meter"><i /></div>
-          <small>HIT <b>0 / 3</b>　STATUS {wrestlers.red.stance === 'down' ? 'DOWN' : 'STANDING'}</small>
+          <div className="fighter-hud__meter"><i style={{ width: `${((3 - hits.red) / 3) * 100}%` }} /></div>
+          <small>DAMAGE <b>{hits.red} / 3</b>　STATUS {wrestlers.red.stance === 'down' ? 'DOWN' : 'STANDING'}</small>
         </div>
       </section>
+      <section className="game-action-controls" aria-label="プレイヤーの行動">
+        {activeWrestler === 'blue' ? (
+          <strong>CPU TURN</strong>
+        ) : pendingTurnSkip.red ? (
+          <button onClick={() => consumeTurnSkip('red')} type="button">行動不能ターンを進める</button>
+        ) : downRecovery.red === 'pending' ? (
+          <button
+            onClick={() => {
+              const die = rollD6();
+              setLastRoll(die);
+              resolveRecovery('red', die >= 4 ? 'success' : 'failure');
+            }}
+            type="button"
+          >
+            立ち上がり判定
+          </button>
+        ) : ropeThrowTest.phase === 'choose-direction' ? (
+          <>
+            <strong>ロープスロー方向</strong>
+            {ROPE_THROW_DIRECTIONS.map(({ facing, label }) => (
+              <button key={facing} onClick={() => chooseRopeThrowDirection(facing)} type="button">{label}</button>
+            ))}
+            <button className="is-subtle" onClick={cancelRopeThrowTest} type="button">戻る</button>
+          </>
+        ) : phaseLocksBoard ? (
+          <strong>DICE ROLL...</strong>
+        ) : (
+          <>
+            <button onClick={() => beginAttackTest('strike')} type="button">通常打撃</button>
+            <button onClick={() => beginAttackTest('knockback')} type="button">ノックバック</button>
+            <button onClick={() => beginAttackTest('swap')} type="button">入れ替え投げ</button>
+            <button onClick={() => beginAttackTest('dive')} type="button">飛び技</button>
+            <button onClick={() => beginAttackTest('pull-down')} type="button">引きずり落とし</button>
+            <button onClick={() => beginAttackTest('knock-down')} type="button">高所崩し</button>
+            <button className="rope-action" onClick={beginRopeThrowTest} type="button">ロープスロー</button>
+            <button className="is-subtle" onClick={() => advanceTurn('red')} type="button">待機</button>
+          </>
+        )}
+      </section>
+      {matchWinner && (
+        <div className="match-result" role="dialog" aria-modal="true" aria-label="試合結果">
+          <div>
+            <p>3 HIT MATCH</p>
+            <h2>{matchWinner === 'red' ? 'RED' : 'BLUE'} WIN</h2>
+            <button onClick={resetMatch} type="button">もう一度試合する</button>
+          </div>
+        </div>
+      )}
       {showCoordinateAtlas && (
         <section className="coordinate-atlas" aria-labelledby="coordinate-atlas-title">
           <h2 id="coordinate-atlas-title">3D座標見取り図</h2>
