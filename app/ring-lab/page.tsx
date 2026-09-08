@@ -599,7 +599,7 @@ function WrestlerCube({
   style,
   translucent = false,
 }: {
-  characterSprite?: boolean;
+  characterSprite?: 'red' | 'blue';
   colorClass: 'corner-red' | 'corner-blue';
   down?: boolean;
   facing: RingSide;
@@ -646,7 +646,7 @@ function WrestlerCube({
           aria-hidden="true"
           className="wrestler-character-sprite"
           style={{
-            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-red-rounded-sprites.png)`,
+            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
             backgroundPosition: spritePosition[facing],
             transform: spriteTransform[facing],
           }}
@@ -1937,7 +1937,7 @@ export default function RingLabPage() {
             })}
           </svg>
           <WrestlerCube
-            characterSprite
+            characterSprite="red"
             colorClass="corner-red"
             down={wrestlers.red.stance === 'down'}
             facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}
@@ -1972,6 +1972,7 @@ export default function RingLabPage() {
             </div>
           )}
           <WrestlerCube
+            characterSprite="blue"
             colorClass="corner-blue"
             down={wrestlers.blue.stance === 'down'}
             facing={rotateFacingWithBoard(wrestlers.blue.facing, boardRotation)}
