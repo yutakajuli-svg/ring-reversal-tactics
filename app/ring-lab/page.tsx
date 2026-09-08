@@ -6,6 +6,7 @@ import './ring-lab.css';
 const SIZE = 7;
 const RINGSIDE_SIZE = 9;
 const BOARD_CENTER_SIZE = RINGSIDE_SIZE;
+const ASSET_BASE = process.env.GITHUB_ACTIONS === 'true' ? '/ring-reversal-tactics' : '';
 const cubes = Array.from({ length: SIZE * SIZE }, (_, index) => ({
   r: Math.floor(index / SIZE),
   c: index % SIZE,
@@ -590,6 +591,7 @@ function projectCubeObject(
 }
 
 function WrestlerCube({
+  characterSprite = false,
   colorClass,
   down = false,
   facing,
@@ -597,6 +599,7 @@ function WrestlerCube({
   style,
   translucent = false,
 }: {
+  characterSprite?: boolean;
   colorClass: 'corner-red' | 'corner-blue';
   down?: boolean;
   facing: RingSide;
@@ -611,9 +614,15 @@ function WrestlerCube({
     : SCREEN_SURFACES[frontSurface];
   const eyes = FRONT_EYES.map(({ surface, u, v }) => projectCubeObject(facing, surface, u, v))
     .filter((point): point is { x: number; y: number } => point !== null);
+  const spritePosition: Record<RingSide, string> = {
+    'right-back': '100% 0%',
+    'right-front': '0% 0%',
+    'left-front': '100% 100%',
+    'left-back': '0% 100%',
+  };
 
   return (
-    <i className={`tile-cube wrestler-cube ${colorClass}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
+    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
       <b className="cube-face cube-top" />
       <b className="cube-face cube-left" />
       <b className="cube-face cube-right" />
@@ -623,6 +632,16 @@ function WrestlerCube({
           <circle className="cube-facing-eye" cx={x} cy={y} key={`${x}-${y}`} r="3" />
         ))}
       </svg>
+      {characterSprite && (
+        <b
+          aria-hidden="true"
+          className="wrestler-character-sprite"
+          style={{
+            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-red-rounded-sprites.png)`,
+            backgroundPosition: spritePosition[facing],
+          }}
+        />
+      )}
     </i>
   );
 }
@@ -1910,6 +1929,7 @@ export default function RingLabPage() {
             })}
           </svg>
           <WrestlerCube
+            characterSprite
             colorClass="corner-red"
             down={wrestlers.red.stance === 'down'}
             facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}

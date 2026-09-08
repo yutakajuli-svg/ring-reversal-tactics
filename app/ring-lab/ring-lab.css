@@ -668,6 +668,26 @@
     top 280ms cubic-bezier(.22, .8, .25, 1);
 }
 
+/* The character is a visual skin over the original 84px cube. The wrapper,
+   board position, depth, opacity and all interaction geometry stay unchanged. */
+.wrestler-cube.has-character-sprite > .cube-face,
+.wrestler-cube.has-character-sprite > .cube-facing-mark {
+  opacity: 0;
+}
+
+.wrestler-character-sprite {
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  display: block;
+  width: 84px;
+  height: 84px;
+  background-repeat: no-repeat;
+  background-size: 200% 200%;
+  filter: drop-shadow(0 5px 3px #0008);
+  pointer-events: none;
+}
+
 .wrestler-cube.is-down {
   filter: saturate(.55) brightness(.82);
 }
