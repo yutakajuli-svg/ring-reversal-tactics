@@ -1111,8 +1111,26 @@ export default function RingLabPage() {
 
   return (
     <main className="ring-lab">
-      <p>RING SHAPE STUDY</p>
-      <h1>7 × 7 CUBES</h1>
+      <header className="ring-lab-titlebar">
+        <div>
+          <p>WRESTLING TACTICS / RING LAB</p>
+          <h1>RING MATCH</h1>
+        </div>
+        <strong>ROUND TEST</strong>
+      </header>
+
+      <section className="fighter-hud fighter-hud--cpu" aria-label="青コーナー選手情報">
+        <div className="fighter-hud__portrait" aria-hidden="true">B</div>
+        <div className="fighter-hud__body">
+          <div className="fighter-hud__heading"><b>BLUE CORNER</b><span>CPU</span></div>
+          <strong>BLUE WRESTLER</strong>
+          <div className="fighter-hud__meter"><i /></div>
+          <small>HIT <b>0 / 3</b>　STATUS {wrestlers.blue.stance === 'down' ? 'DOWN' : 'STANDING'}</small>
+        </div>
+      </section>
+
+      <div className="lab-console">
+        <p className="lab-console__label">TEST COMMAND</p>
       <div className="movement-controls" aria-label="行動する選手コマ">
         <button
           className={activeWrestler === 'red' ? 'is-active' : undefined}
@@ -1270,6 +1288,7 @@ export default function RingLabPage() {
         >
           {showCoordinateAtlas ? '3D座標見取り図を隠す' : '3D座標見取り図を表示'}
         </button>
+      </div>
       </div>
       <div className="cube-study" aria-label="立方体を七マスずつ並べたリングの土台">
         <div className="cube-board">
@@ -1654,6 +1673,27 @@ export default function RingLabPage() {
           )}
         </div>
       </div>
+
+      <section className="match-message" aria-live="polite">
+        <b>{activeWrestler === 'red' ? 'RED' : 'BLUE'} TURN</b>
+        <span>
+          {ropeThrowTest.phase !== 'idle'
+            ? 'ロープスローの方向と判定を選択してください。'
+            : attackTest.phase !== 'idle'
+              ? `${attackLabel(attackTest.kind)}の成否を選択してください。`
+              : `${activeWrestler === 'red' ? '赤' : '青'}コマの移動先、または行動を選択してください。`}
+        </span>
+      </section>
+
+      <section className="fighter-hud fighter-hud--player" aria-label="赤コーナー選手情報">
+        <div className="fighter-hud__portrait" aria-hidden="true">R</div>
+        <div className="fighter-hud__body">
+          <div className="fighter-hud__heading"><b>RED CORNER</b><span>PLAYER</span></div>
+          <strong>RED WRESTLER</strong>
+          <div className="fighter-hud__meter"><i /></div>
+          <small>HIT <b>0 / 3</b>　STATUS {wrestlers.red.stance === 'down' ? 'DOWN' : 'STANDING'}</small>
+        </div>
+      </section>
       {showCoordinateAtlas && (
         <section className="coordinate-atlas" aria-labelledby="coordinate-atlas-title">
           <h2 id="coordinate-atlas-title">3D座標見取り図</h2>
