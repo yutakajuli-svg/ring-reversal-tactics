@@ -660,6 +660,28 @@
     top 280ms cubic-bezier(.22, .8, .25, 1);
 }
 
+.wrestler-cube.is-hit {
+  animation: wrestler-hit-reaction .48s ease-out both;
+}
+
+.wrestler-cube.is-miss {
+  animation: wrestler-miss-reaction .58s ease-out both;
+}
+
+@keyframes wrestler-hit-reaction {
+  0%, 100% { translate: 0 0; filter: none; }
+  18% { translate: -7px 2px; filter: brightness(1.6) saturate(.5); }
+  38% { translate: 6px -1px; }
+  58% { translate: -4px 1px; }
+  76% { translate: 2px 0; }
+}
+
+@keyframes wrestler-miss-reaction {
+  0%, 100% { translate: 0 0; }
+  32% { translate: 8px -2px; }
+  62% { translate: -3px 1px; }
+}
+
 /* The character is a visual skin over the original 84px cube. The wrapper,
    board position, depth, opacity and all interaction geometry stay unchanged. */
 .wrestler-cube.has-character-sprite > .cube-face,
@@ -784,6 +806,50 @@
 @keyframes cpu-action-pop {
   from { opacity: 0; transform: translate(-50%, -40px) scale(.75); }
   to { opacity: 1; transform: translate(-50%, -48px) scale(1); }
+}
+
+.combat-result-cue {
+  position: absolute;
+  display: grid;
+  width: 78px;
+  height: 44px;
+  place-items: center;
+  color: #111;
+  transform: translate(-50%, -66px);
+  pointer-events: none;
+  animation: combat-result-pop 1.05s ease-out both;
+}
+
+.combat-result-cue i {
+  position: absolute;
+  inset: -8px -12px;
+  background: #f5c447;
+  clip-path: polygon(50% 0, 59% 24%, 78% 7%, 76% 31%, 100% 27%, 82% 47%, 100% 60%, 75% 62%, 82% 89%, 59% 73%, 50% 100%, 41% 74%, 18% 91%, 25% 63%, 0 60%, 18% 47%, 0 27%, 24% 31%, 22% 7%, 41% 24%);
+  filter: drop-shadow(3px 4px 0 #0008);
+}
+
+.combat-result-cue strong {
+  position: relative;
+  z-index: 1;
+  font: 900 20px/1 "Arial Black", Impact, sans-serif;
+  letter-spacing: .04em;
+  text-shadow: 1px 1px 0 #fff8;
+  transform: rotate(-4deg);
+}
+
+.combat-result-cue.is-miss i {
+  background: #e7eaee;
+}
+
+.combat-result-cue.is-miss strong {
+  color: #58616c;
+}
+
+@keyframes combat-result-pop {
+  0% { opacity: 0; transform: translate(-50%, -48px) scale(.45) rotate(-8deg); }
+  18% { opacity: 1; transform: translate(-50%, -70px) scale(1.16) rotate(2deg); }
+  34%, 72% { opacity: 1; transform: translate(-50%, -66px) scale(1) rotate(0); }
+  100% { opacity: 0; transform: translate(-50%, -78px) scale(.92); }
 }
 
 /* The foreground post and a wrestler standing on its top share one visual

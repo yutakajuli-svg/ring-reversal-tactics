@@ -79,6 +79,12 @@ type AttackKind = 'strike' | 'knockback' | 'swap' | 'dive' | 'pull-down' | 'knoc
 type AttackTest =
   | { phase: 'idle'; message: string }
   | { phase: 'choose-result'; kind: AttackKind; attacker: WrestlerId; defender: WrestlerId };
+type CombatResultCue = {
+  outcome: 'hit' | 'miss';
+  actor: WrestlerId;
+  subject: WrestlerId;
+  run: number;
+};
 type RopeThrowParticipants = { attacker: WrestlerId; defender: WrestlerId };
 type RopeThrowTest =
   | { phase: 'idle'; message: string }
@@ -169,6 +175,27 @@ function isAdjacentForRopeThrow(left: BoardLocation, right: BoardLocation) {
   return left.area === right.area
     && (left.area === 'ring' || left.area === 'ringside')
     && Math.abs(left.row - right.row) + Math.abs(left.column - right.column) === 1;
+}
+
+function isMovementAllowedByEngagement(
+  from: BoardLocation,
+  to: BoardLocation,
+  opponent: BoardLocation,
+  stance: WrestlerState['stance'],
+) {
+  const distance = Math.abs(from.row - to.row) + Math.abs(from.column - to.column);
+  if (stance === 'down') return distance <= 1;
+  if (!isAdjacentForRopeThrow(from, opponent)) return distance <= 2;
+
+  // While engaged, a wrestler may step away by one cell or circle one quarter
+  // around the opponent. Crossing directly from front to rear is not allowed.
+  if (distance <= 1) return true;
+  if (!isAdjacentForRopeThrow(to, opponent)) return false;
+  const fromRow = from.row - opponent.row;
+  const fromColumn = from.column - opponent.column;
+  const toRow = to.row - opponent.row;
+  const toColumn = to.column - opponent.column;
+  return fromRow * toRow + fromColumn * toColumn === 0;
 }
 
 function oppositeFacing(facing: RingSide): RingSide {
@@ -611,6 +638,7 @@ function WrestlerCube({
   down = false,
   facing,
   label,
+  reaction,
   style,
   translucent = false,
 }: {
@@ -619,6 +647,7 @@ function WrestlerCube({
   down?: boolean;
   facing: RingSide;
   label: string;
+  reaction?: 'hit' | 'miss';
   style: { left: string; top: string; zIndex: number };
   translucent?: boolean;
 }) {
@@ -646,7 +675,7 @@ function WrestlerCube({
   };
 
   return (
-    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
+    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}${reaction ? ` is-${reaction}` : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
       <b className="cube-face cube-top" />
       <b className="cube-face cube-left" />
       <b className="cube-face cube-right" />
@@ -742,6 +771,7 @@ export default function RingLabPage() {
   const [debugMode, setDebugMode] = useState(false);
   const [isCpuThinking, setIsCpuThinking] = useState(false);
   const [cpuActionCue, setCpuActionCue] = useState<'attack' | null>(null);
+  const [combatResult, setCombatResult] = useState<CombatResultCue | null>(null);
   const [lastRoll, setLastRoll] = useState<number | null>(null);
   const [gameMessage, setGameMessage] = useState('緑色の移動可能マスを選んでください。');
   const [boardRotation, setBoardRotation] = useState<BoardRotation>(0);
@@ -791,7 +821,10 @@ export default function RingLabPage() {
     setBoardRotation((current) => (current === 0 ? 2 : 0));
   };
 
-  const phaseLocksBoard = matchWinner !== null || ropeThrowTest.phase !== 'idle' || attackTest.phase !== 'idle';
+  const phaseLocksBoard = matchWinner !== null
+    || combatResult !== null
+    || ropeThrowTest.phase !== 'idle'
+    || attackTest.phase !== 'idle';
   const actionLocksBoard = phaseLocksBoard || isCpuThinking || (!debugMode && activeWrestler === 'blue');
 
   const advanceTurn = (actor: WrestlerId) => {
@@ -808,6 +841,19 @@ export default function RingLabPage() {
     });
   };
 
+  const showCombatResult = (
+    outcome: CombatResultCue['outcome'],
+    actor: WrestlerId,
+    subject: WrestlerId,
+    onComplete: () => void,
+  ) => {
+    setCombatResult((current) => ({ outcome, actor, subject, run: (current?.run ?? 0) + 1 }));
+    queueRopeThrowStep(() => {
+      setCombatResult(null);
+      onComplete();
+    }, 1050);
+  };
+
   const resetMatch = () => {
     ropeThrowTimers.current.forEach((timer) => window.clearTimeout(timer));
     ropeThrowTimers.current = [];
@@ -820,6 +866,7 @@ export default function RingLabPage() {
     setDebugMode(false);
     setIsCpuThinking(false);
     setCpuActionCue(null);
+    setCombatResult(null);
     setLastRoll(null);
     setGameMessage('緑色の移動可能マスを選んでください。');
     setBoardRotation(0);
@@ -854,8 +901,18 @@ export default function RingLabPage() {
     const otherId = otherWrestler(activeWrestler);
     const from = wrestlers[activeWrestler].location;
     const moveDistance = Math.abs(from.row - location.row) + Math.abs(from.column - location.column);
-    if (moveDistance > 2) {
-      setAttackTest({ phase: 'idle', message: '1ターンの移動は2マスまでです。' });
+    if (!isMovementAllowedByEngagement(
+      from,
+      location,
+      wrestlers[otherId].location,
+      wrestlers[activeWrestler].stance,
+    )) {
+      setAttackTest({
+        phase: 'idle',
+        message: isAdjacentForRopeThrow(from, wrestlers[otherId].location)
+          ? '相手と組み合っているため、横へ回るか1マス離れる移動のみ可能です。背後へ一度には回れません。'
+          : '1ターンの移動は2マスまでです。',
+      });
       return;
     }
     if (
@@ -1354,8 +1411,14 @@ export default function RingLabPage() {
     }
 
     setAttackTest({ phase: 'idle', message });
-    if (damaged) registerHit(damaged);
-    advanceTurn(attacker);
+    const resultOutcome: CombatResultCue['outcome'] = outcome === 'success' && damaged === defender
+      ? 'hit'
+      : 'miss';
+    const resultSubject = resultOutcome === 'hit' ? defender : attacker;
+    showCombatResult(resultOutcome, attacker, resultSubject, () => {
+      if (damaged) registerHit(damaged);
+      advanceTurn(attacker);
+    });
   };
 
   const cancelAttackTest = () => {
@@ -1409,6 +1472,7 @@ export default function RingLabPage() {
       || activeWrestler !== 'blue'
       || matchWinner
       || cpuActionCue !== null
+      || combatResult !== null
       || ropeThrowTest.phase !== 'idle'
       || attackTest.phase !== 'idle'
     ) {
@@ -1459,7 +1523,7 @@ export default function RingLabPage() {
           const distance = Math.abs(cpu.location.row - location.row)
             + Math.abs(cpu.location.column - location.column);
           return distance >= 1
-            && distance <= 2
+            && isMovementAllowedByEngagement(cpu.location, location, player.location, cpu.stance)
             && !isSameLocation(location, player.location)
             && !isBlockedCornerMove(cpu.location, location, boardRotation);
         })
@@ -1468,6 +1532,43 @@ export default function RingLabPage() {
           const rightDistance = Math.abs(right.row - player.location.row) + Math.abs(right.column - player.location.column);
           return leftDistance - rightDistance;
         });
+
+      const ropeDestinations = [cpu.location, ...candidates].filter((location, index, locations) => (
+        isAdjacentForRopeThrow(location, player.location)
+        && locations.findIndex((candidate) => isSameLocation(candidate, location)) === index
+      ));
+      const shouldUseRopeThrow = cpu.stance === 'standing'
+        && ropeDestinations.length > 0
+        && Math.random() < 0.42;
+
+      if (shouldUseRopeThrow) {
+        destination = randomChoice(ropeDestinations);
+        const directionOptions = ROPE_THROW_DIRECTIONS.flatMap(({ facing }) => {
+          const target = ropeDirectionTarget(destination, facing, player.location);
+          return target ? [{ facing, target }] : [];
+        });
+        if (directionOptions.length > 0) {
+          const impactfulDirections = directionOptions.filter(({ target }) => (
+            target.kind === 'outside' || target.kind === 'corner'
+          ));
+          const selectedDirection = impactfulDirections.length > 0 && Math.random() < 0.65
+            ? randomChoice(impactfulDirections)
+            : randomChoice(directionOptions);
+          setWrestlers((current) => ({
+            ...current,
+            blue: { ...current.blue, location: destination, facing: selectedDirection.facing },
+          }));
+          setGameMessage('BLUEがロープスローを仕掛けます。');
+          setRopeThrowTest({
+            phase: 'choose-result',
+            attacker: 'blue',
+            defender: 'red',
+            direction: selectedDirection.facing,
+          });
+          setIsCpuThinking(false);
+          return;
+        }
+      }
 
       const currentFacing = facingToward(cpu.location, player.location);
       const currentAttackDistance = forwardDistance(cpu.location, player.location, currentFacing);
@@ -1495,14 +1596,16 @@ export default function RingLabPage() {
         setCpuActionCue('attack');
         setGameMessage('BLUEが攻撃を仕掛けます。');
         queueRopeThrowStep(() => {
-          if (die >= 4) registerHit('red');
           setAttackTest({
             phase: 'idle',
             message: `BLUE STRIKE ${die >= 4 ? 'HIT' : 'MISS'}。D6=${die}`,
           });
           setCpuActionCue(null);
-          setIsCpuThinking(false);
-          advanceTurn('blue');
+          showCombatResult(die >= 4 ? 'hit' : 'miss', 'blue', die >= 4 ? 'red' : 'blue', () => {
+            if (die >= 4) registerHit('red');
+            setIsCpuThinking(false);
+            advanceTurn('blue');
+          });
         }, 1500);
         return;
       } else {
@@ -1517,6 +1620,7 @@ export default function RingLabPage() {
     activeWrestler,
     attackTest.phase,
     boardRotation,
+    combatResult,
     cpuActionCue,
     debugMode,
     downRecovery.blue,
@@ -1556,7 +1660,12 @@ export default function RingLabPage() {
       && !hasMoved
       && !pendingTurnSkip[activeWrestler]
       && distance >= 1
-      && distance <= (wrestlers[activeWrestler].stance === 'down' ? 1 : 2)
+      && isMovementAllowedByEngagement(
+        activeLocation,
+        location,
+        otherLocation,
+        wrestlers[activeWrestler].stance,
+      )
       && !isSameLocation(location, otherLocation)
       && !isBlockedCornerMove(activeLocation, location, boardRotation);
   };
@@ -2034,6 +2143,7 @@ export default function RingLabPage() {
             down={wrestlers.red.stance === 'down'}
             facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}
             label="プレイヤー選手コマ"
+            reaction={combatResult?.subject === 'red' ? combatResult.outcome : undefined}
             style={boardPosition(wrestlers.red.location, boardRotation)}
             translucent={
               wrestlers.red.location.area === 'corner'
@@ -2075,6 +2185,7 @@ export default function RingLabPage() {
             down={wrestlers.blue.stance === 'down'}
             facing={rotateFacingWithBoard(wrestlers.blue.facing, boardRotation)}
             label="CPU選手コマ"
+            reaction={combatResult?.subject === 'blue' ? combatResult.outcome : undefined}
             style={boardPosition(wrestlers.blue.location, boardRotation)}
             translucent={
               wrestlers.blue.location.area === 'corner'
@@ -2089,6 +2200,18 @@ export default function RingLabPage() {
               style={{ ...boardPosition(wrestlers.blue.location, boardRotation), zIndex: 148 }}
             >
               <MenkoAttackIcon />
+            </div>
+          )}
+          {combatResult && (
+            <div
+              aria-live="assertive"
+              className={`combat-result-cue is-${combatResult.outcome}`}
+              key={combatResult.run}
+              role="status"
+              style={{ ...boardPosition(wrestlers[combatResult.subject].location, boardRotation), zIndex: 149 }}
+            >
+              <i aria-hidden="true" />
+              <strong>{combatResult.outcome === 'hit' ? 'HIT!' : 'MISS'}</strong>
             </div>
           )}
           {/* The ring's near apron is a separate visual surface. It can cover
