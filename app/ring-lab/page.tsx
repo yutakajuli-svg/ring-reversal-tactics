@@ -113,8 +113,8 @@ const ROPE_THROW_DIRECTIONS = [
 
 const INITIAL_WRESTLERS: Record<WrestlerId, WrestlerState> = {
   // D5 and F5: both wrestlers begin near center with E5 between them.
-  red: { location: { area: 'ring', row: 3, column: 2 }, facing: 'right-front', stance: 'down' },
-  blue: { location: { area: 'ring', row: 3, column: 4 }, facing: 'left-back', stance: 'down' },
+  red: { location: { area: 'ring', row: 3, column: 2 }, facing: 'right-front', stance: 'standing' },
+  blue: { location: { area: 'ring', row: 3, column: 4 }, facing: 'left-back', stance: 'standing' },
 };
 
 // There are only two camera views: the normal view and its 180° opposite.
@@ -697,15 +697,7 @@ function WrestlerCube({
               : `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
             backgroundPosition: down ? 'center' : spritePosition[facing],
             backgroundSize: down ? 'contain' : '200% 200%',
-<<<<<<< HEAD
             transform: down ? 'translate(-3px, 18px) scale(.92)' : spriteTransform[facing],
-=======
-<<<<<<< HEAD
-            transform: down ? 'translate(-10px, -3px) scale(.92)' : spriteTransform[facing],
-=======
-            transform: down ? 'translate(0, -2px) scale(1.02)' : spriteTransform[facing],
->>>>>>> 429f8727da9ce1e383c4637441f6e6b13a2580c0
->>>>>>> 3dded4e2be29dd389b87564238f369187919932f
           }}
         />
       )}
