@@ -690,11 +690,14 @@ function WrestlerCube({
       {characterSprite && (
         <b
           aria-hidden="true"
-          className="wrestler-character-sprite"
+          className={`wrestler-character-sprite${down ? ' wrestler-character-sprite--down' : ''}`}
           style={{
-            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
-            backgroundPosition: spritePosition[facing],
-            transform: spriteTransform[facing],
+            backgroundImage: down
+              ? `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-down.png)`
+              : `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
+            backgroundPosition: down ? 'center' : spritePosition[facing],
+            backgroundSize: down ? 'contain' : '200% 200%',
+            transform: down ? 'translate(0, 4px) scale(1.14)' : spriteTransform[facing],
           }}
         />
       )}
@@ -1009,15 +1012,9 @@ export default function RingLabPage() {
     if (ropeThrowTest.phase !== 'choose-result') return;
     const { attacker, defender, direction } = ropeThrowTest;
     const attackerLocation = wrestlers[attacker].location;
-<<<<<<< HEAD
     const revealRopeThrowResult = (showCue = true) => {
       if (roll !== undefined) setLastRoll(roll);
       if (showCue) {
-=======
-    const revealRopeThrowResult = (showMiss = true) => {
-      if (roll !== undefined) setLastRoll(roll);
-      if (outcome === 'success' || showMiss) {
->>>>>>> eb85b016a9ee21c19eccd77f52fbb10f9ed4f454
         flashCombatResult(outcome === 'success' ? 'hit' : 'miss', attacker, defender);
       }
     };
@@ -2188,7 +2185,7 @@ export default function RingLabPage() {
               && isTransparentCorner(wrestlers.red.location.row, wrestlers.red.location.column, boardRotation)
             }
           />
-          {activeWrestler === 'red' && !matchWinner && (
+          {activeWrestler === 'red' && wrestlers.red.stance !== 'down' && !matchWinner && (
             <div
               className="piece-turn-controls"
               style={{ ...boardPosition(wrestlers.red.location, boardRotation), zIndex: 145 }}

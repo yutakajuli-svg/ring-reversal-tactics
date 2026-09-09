@@ -702,25 +702,17 @@
   pointer-events: none;
 }
 
+.wrestler-character-sprite--down {
+  background-repeat: no-repeat;
+  transform-origin: 50% 50%;
+}
+
 .wrestler-cube.is-down {
-  filter: saturate(.55) brightness(.82);
+  filter: saturate(.82) brightness(.92);
 }
 
 .wrestler-cube.is-down::after {
-  content: "DOWN";
-  position: absolute;
-  z-index: 8;
-  left: 50%;
-  top: 50%;
-  padding: 3px 5px;
-  border: 1px solid #ffd36a;
-  border-radius: 4px;
-  color: #fff3c4;
-  background: #17120ddd;
-  font: 700 9px/1 "Courier New", monospace;
-  letter-spacing: .08em;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+  content: none;
 }
 
 .piece-turn-controls {
