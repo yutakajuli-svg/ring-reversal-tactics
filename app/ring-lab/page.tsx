@@ -245,13 +245,15 @@ function cornerTopAttackVector(from: BoardLocation, to: BoardLocation) {
   if (from.area !== 'corner' || to.area !== 'ring') return null;
   const rowDistance = to.row - from.row;
   const columnDistance = to.column - from.column;
+  const range = Math.max(Math.abs(rowDistance), Math.abs(columnDistance));
   if (
-    Math.max(Math.abs(rowDistance), Math.abs(columnDistance)) !== 1
+    range < 1
+    || range > 2
     || (rowDistance === 0 && columnDistance === 0)
   ) {
     return null;
   }
-  return { row: rowDistance, column: columnDistance };
+  return { row: Math.sign(rowDistance), column: Math.sign(columnDistance) };
 }
 
 function isPlayableLocation(location: BoardLocation) {
@@ -1003,11 +1005,16 @@ export default function RingLabPage() {
     setRopeThrowTest({ ...ropeThrowTest, phase: 'choose-result', direction });
   };
 
-  const executeRopeThrowTest = (outcome: 'success' | 'failure') => {
+  const executeRopeThrowTest = (outcome: 'success' | 'failure', roll?: number) => {
     if (ropeThrowTest.phase !== 'choose-result') return;
     const { attacker, defender, direction } = ropeThrowTest;
     const attackerLocation = wrestlers[attacker].location;
-    flashCombatResult(outcome === 'success' ? 'hit' : 'miss', attacker, defender);
+    const revealRopeThrowResult = (showCue = true) => {
+      if (roll !== undefined) setLastRoll(roll);
+      if (showCue) {
+        flashCombatResult(outcome === 'success' ? 'hit' : 'miss', attacker, defender);
+      }
+    };
 
     if (attackerLocation.area === 'ringside') {
       const geometry = ringsideThrowGeometry(attackerLocation, direction);
@@ -1026,6 +1033,7 @@ export default function RingLabPage() {
       }));
 
       queueRopeThrowStep(() => {
+        revealRopeThrowResult();
         setBoardRotation((current) => rotationAfterMove(
           current,
           affectedFrom,
@@ -1061,6 +1069,7 @@ export default function RingLabPage() {
         [affected]: { ...current[affected], facing: direction, location: geometry.destination },
       }));
       queueRopeThrowStep(() => {
+        revealRopeThrowResult();
         setBoardRotation((current) => rotationAfterMove(
           current,
           affectedFrom,
@@ -1094,6 +1103,7 @@ export default function RingLabPage() {
         [affected]: { ...current[affected], facing: direction, location: destination },
       }));
       queueRopeThrowStep(() => {
+        revealRopeThrowResult();
         setBoardRotation((current) => rotationAfterMove(
           current,
           affectedFrom,
@@ -1129,6 +1139,7 @@ export default function RingLabPage() {
         [defender]: { ...current[defender], location: geometry.ropeLocation },
       }));
       setRopeAnimation((current) => ({ run: current.run + 1, edge: geometry.edge }));
+      revealRopeThrowResult(false);
 
       if (outcome === 'success') {
         setActiveWrestler(attacker);
@@ -1152,7 +1163,7 @@ export default function RingLabPage() {
     }, 320);
   };
 
-  const resolveInterceptTest = (outcome: 'hit' | 'miss' | 'skip') => {
+  const resolveInterceptTest = (outcome: 'hit' | 'miss' | 'skip', roll?: number) => {
     if (ropeThrowTest.phase !== 'awaiting-intercept') return;
     const { attacker, defender, direction, returnLocation } = ropeThrowTest;
     setWrestlers((current) => ({
@@ -1167,6 +1178,7 @@ export default function RingLabPage() {
     const edge = ROPE_THROW_DIRECTIONS.find(({ facing }) => facing === direction)!.edge;
     setRopeAnimation((current) => ({ run: current.run + 1, edge }));
     queueRopeThrowStep(() => {
+      if (roll !== undefined) setLastRoll(roll);
       const message = outcome === 'hit'
         ? '迎撃成功。戻ってきた側にダメージ。'
         : outcome === 'miss'
@@ -1231,7 +1243,7 @@ export default function RingLabPage() {
       const cornerVector = cornerTopAttackVector(attackerState.location, defenderState.location);
       const straightDive = attackerHeight > defenderHeight && distance !== null && distance >= 1 && distance <= 2;
       if (!cornerVector && !straightDive) {
-        return '飛び技は、高い場所から正面1〜2マス、またはコーナー上から内側に接する3マスが対象です。';
+        return '飛び技は、高い場所から正面1〜2マス、またはコーナー上から内側2マスまでが対象です。';
       }
       const vector = cornerVector ?? directionVector(attackerState.facing);
       return diveFallbackLanding(attackerState.location, defenderState.location, vector, attackerState.location)
@@ -1476,14 +1488,12 @@ export default function RingLabPage() {
     }
     if (ropeThrowTest.phase === 'choose-result') {
       const die = rollD6();
-      setLastRoll(die);
-      const timer = window.setTimeout(() => executeRopeThrowTest(die >= 4 ? 'success' : 'failure'), 520);
+      const timer = window.setTimeout(() => executeRopeThrowTest(die >= 4 ? 'success' : 'failure', die), 100);
       return () => window.clearTimeout(timer);
     }
     if (ropeThrowTest.phase === 'awaiting-intercept') {
       const die = rollD6();
-      setLastRoll(die);
-      const timer = window.setTimeout(() => resolveInterceptTest(die >= 4 ? 'hit' : 'miss'), 720);
+      const timer = window.setTimeout(() => resolveInterceptTest(die >= 4 ? 'hit' : 'miss', die), 720);
       return () => window.clearTimeout(timer);
     }
   }, [attackTest.phase, debugMode, ropeThrowTest.phase]);
