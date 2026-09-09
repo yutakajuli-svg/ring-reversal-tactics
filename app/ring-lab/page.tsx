@@ -1009,9 +1009,15 @@ export default function RingLabPage() {
     if (ropeThrowTest.phase !== 'choose-result') return;
     const { attacker, defender, direction } = ropeThrowTest;
     const attackerLocation = wrestlers[attacker].location;
+<<<<<<< HEAD
     const revealRopeThrowResult = (showCue = true) => {
       if (roll !== undefined) setLastRoll(roll);
       if (showCue) {
+=======
+    const revealRopeThrowResult = (showMiss = true) => {
+      if (roll !== undefined) setLastRoll(roll);
+      if (outcome === 'success' || showMiss) {
+>>>>>>> eb85b016a9ee21c19eccd77f52fbb10f9ed4f454
         flashCombatResult(outcome === 'success' ? 'hit' : 'miss', attacker, defender);
       }
     };
