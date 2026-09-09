@@ -799,6 +799,7 @@ export default function RingLabPage() {
     message: '攻撃するコマを選び、相手の方向を向かせてください。',
   });
   const ropeThrowTimers = useRef<number[]>([]);
+  const combatResultRun = useRef(0);
 
   useEffect(() => () => {
     ropeThrowTimers.current.forEach((timer) => window.clearTimeout(timer));
@@ -847,11 +848,25 @@ export default function RingLabPage() {
     subject: WrestlerId,
     onComplete: () => void,
   ) => {
-    setCombatResult((current) => ({ outcome, actor, subject, run: (current?.run ?? 0) + 1 }));
+    const run = ++combatResultRun.current;
+    setCombatResult({ outcome, actor, subject, run });
     queueRopeThrowStep(() => {
-      setCombatResult(null);
+      setCombatResult((current) => current?.run === run ? null : current);
       onComplete();
     }, 1050);
+  };
+
+  const flashCombatResult = (
+    outcome: CombatResultCue['outcome'],
+    actor: WrestlerId,
+    subject: WrestlerId,
+    duration = 800,
+  ) => {
+    const run = ++combatResultRun.current;
+    setCombatResult({ outcome, actor, subject, run });
+    queueRopeThrowStep(() => {
+      setCombatResult((current) => current?.run === run ? null : current);
+    }, duration);
   };
 
   const resetMatch = () => {
@@ -992,6 +1007,7 @@ export default function RingLabPage() {
     if (ropeThrowTest.phase !== 'choose-result') return;
     const { attacker, defender, direction } = ropeThrowTest;
     const attackerLocation = wrestlers[attacker].location;
+    flashCombatResult(outcome === 'success' ? 'hit' : 'miss', attacker, defender);
 
     if (attackerLocation.area === 'ringside') {
       const geometry = ringsideThrowGeometry(attackerLocation, direction);
@@ -1157,9 +1173,15 @@ export default function RingLabPage() {
           ? '迎撃失敗。ロープスローを実行した側にダメージ。'
           : '迎撃を見送り。両者ノーダメージで正面1マスに戻りました。';
       setRopeThrowTest({ phase: 'idle', message });
-      if (outcome === 'hit') registerHit(defender);
-      if (outcome === 'miss') registerHit(attacker);
-      advanceTurn(attacker);
+      if (outcome === 'skip') {
+        advanceTurn(attacker);
+        return;
+      }
+      showCombatResult(outcome, attacker, defender, () => {
+        if (outcome === 'hit') registerHit(defender);
+        if (outcome === 'miss') registerHit(attacker);
+        advanceTurn(attacker);
+      });
     }, 320);
   };
 
@@ -1414,7 +1436,7 @@ export default function RingLabPage() {
     const resultOutcome: CombatResultCue['outcome'] = outcome === 'success' && damaged === defender
       ? 'hit'
       : 'miss';
-    const resultSubject = resultOutcome === 'hit' ? defender : attacker;
+    const resultSubject = defender;
     showCombatResult(resultOutcome, attacker, resultSubject, () => {
       if (damaged) registerHit(damaged);
       advanceTurn(attacker);
@@ -1601,7 +1623,7 @@ export default function RingLabPage() {
             message: `BLUE STRIKE ${die >= 4 ? 'HIT' : 'MISS'}。D6=${die}`,
           });
           setCpuActionCue(null);
-          showCombatResult(die >= 4 ? 'hit' : 'miss', 'blue', die >= 4 ? 'red' : 'blue', () => {
+          showCombatResult(die >= 4 ? 'hit' : 'miss', 'blue', 'red', () => {
             if (die >= 4) registerHit('red');
             setIsCpuThinking(false);
             advanceTurn('blue');
