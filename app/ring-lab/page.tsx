@@ -697,7 +697,7 @@ function WrestlerCube({
               : `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
             backgroundPosition: down ? 'center' : spritePosition[facing],
             backgroundSize: down ? 'contain' : '200% 200%',
-            transform: down ? 'translate(-10px, 7px) scale(.92)' : spriteTransform[facing],
+            transform: down ? 'translate(-10px, 13px) scale(.92)' : spriteTransform[facing],
           }}
         />
       )}
