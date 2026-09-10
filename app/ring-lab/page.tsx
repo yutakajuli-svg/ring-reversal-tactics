@@ -772,6 +772,7 @@ export default function RingLabPage() {
   const [hits, setHits] = useState<Record<WrestlerId, number>>({ red: 0, blue: 0 });
   const [turnNumber, setTurnNumber] = useState(1);
   const [hasMoved, setHasMoved] = useState(false);
+  const [isActionPhaseReady, setIsActionPhaseReady] = useState(false);
   const [matchWinner, setMatchWinner] = useState<WrestlerId | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [isCpuThinking, setIsCpuThinking] = useState(false);
@@ -836,7 +837,13 @@ export default function RingLabPage() {
   const advanceTurn = (actor: WrestlerId) => {
     setActiveWrestler(otherWrestler(actor));
     setHasMoved(false);
+    setIsActionPhaseReady(false);
     setTurnNumber((current) => current + 1);
+  };
+
+  const commitPositionForAction = () => {
+    setIsActionPhaseReady(true);
+    setGameMessage('この場で行動します。向きを決めて、行動を選んでください。');
   };
 
   const registerHit = (victim: WrestlerId) => {
@@ -882,6 +889,7 @@ export default function RingLabPage() {
     setHits({ red: 0, blue: 0 });
     setTurnNumber(1);
     setHasMoved(false);
+    setIsActionPhaseReady(false);
     setMatchWinner(null);
     setDebugMode(false);
     setIsCpuThinking(false);
@@ -903,6 +911,7 @@ export default function RingLabPage() {
 
   const moveActiveWrestler = (location: BoardLocation) => {
     if (actionLocksBoard) return;
+    if (isActionPhaseReady) return;
     if (hasMoved) {
       setAttackTest({ phase: 'idle', message: 'このターンの移動は完了しています。行動するか、ターンを終了してください。' });
       return;
@@ -955,6 +964,7 @@ export default function RingLabPage() {
       [activeWrestler]: { ...current[activeWrestler], location },
     }));
     setHasMoved(true);
+    setIsActionPhaseReady(true);
     setGameMessage('移動完了。コマ横の回転ボタンで向きを決め、行動を選んでください。');
     setBoardRotation((current) => rotationAfterMove(current, from, location, wrestlers[otherId].location));
   };
@@ -1693,6 +1703,7 @@ export default function RingLabPage() {
       && !phaseLocksBoard
       && !isCpuThinking
       && !hasMoved
+      && !isActionPhaseReady
       && !pendingTurnSkip[activeWrestler]
       && distance >= 1
       && isMovementAllowedByEngagement(
@@ -2185,7 +2196,10 @@ export default function RingLabPage() {
               && isTransparentCorner(wrestlers.red.location.row, wrestlers.red.location.column, boardRotation)
             }
           />
-          {activeWrestler === 'red' && wrestlers.red.stance !== 'down' && !matchWinner && (
+          {activeWrestler === 'red'
+            && wrestlers.red.stance !== 'down'
+            && !matchWinner
+            && isActionPhaseReady && (
             <div
               className="piece-turn-controls"
               style={{ ...boardPosition(wrestlers.red.location, boardRotation), zIndex: 145 }}
@@ -2423,6 +2437,10 @@ export default function RingLabPage() {
           </>
         ) : phaseLocksBoard ? (
           <strong>DICE ROLL...</strong>
+        ) : !isActionPhaseReady ? (
+          <button className="is-subtle" onClick={commitPositionForAction} type="button">
+            この場で行動
+          </button>
         ) : (
           <>
             <button onClick={beginRandomAttack} type="button">攻撃</button>
