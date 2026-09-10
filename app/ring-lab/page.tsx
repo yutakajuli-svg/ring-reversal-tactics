@@ -693,11 +693,11 @@ function WrestlerCube({
           className={`wrestler-character-sprite${down ? ' wrestler-character-sprite--down' : ''}`}
           style={{
             backgroundImage: down
-              ? `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-down.png)`
+              ? `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-down-supine.png)`
               : `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
             backgroundPosition: down ? 'center' : spritePosition[facing],
             backgroundSize: down ? 'contain' : '200% 200%',
-            transform: down ? 'translate(3px, 18px) scale(.85)' : spriteTransform[facing],
+            transform: down ? 'translate(3px, 20px) scale(.85)' : spriteTransform[facing],
           }}
         />
       )}
