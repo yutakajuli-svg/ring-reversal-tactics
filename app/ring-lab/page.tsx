@@ -680,7 +680,7 @@ function WrestlerCube({
   };
 
   return (
-    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}${reaction ? ` is-${reaction}` : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
+    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}${reaction ? ` is-${reaction}` : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={down ? { ...style, zIndex: style.zIndex + 4 } : style}>
       <b className="cube-face cube-top" />
       <b className="cube-face cube-left" />
       <b className="cube-face cube-right" />
@@ -690,17 +690,24 @@ function WrestlerCube({
           <circle className="cube-facing-eye" cx={x} cy={y} key={`${x}-${y}`} r="3" />
         ))}
       </svg>
-      {characterSprite && (
+      {characterSprite && down && (
+        <img
+          alt=""
+          aria-hidden="true"
+          className="wrestler-character-sprite wrestler-character-sprite--down"
+          decoding="sync"
+          draggable={false}
+          src={`${ASSET_BASE}/assets/wrestler-${characterSprite}-down${downPose === 'supine' ? '-supine' : ''}.png`}
+        />
+      )}
+      {characterSprite && !down && (
         <b
           aria-hidden="true"
-          className={`wrestler-character-sprite${down ? ' wrestler-character-sprite--down' : ''}`}
+          className="wrestler-character-sprite"
           style={{
-            backgroundImage: down
-              ? `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-down${downPose === 'supine' ? '-supine' : ''}.png)`
-              : `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
-            backgroundPosition: down ? 'center' : spritePosition[facing],
-            backgroundSize: down ? 'contain' : '200% 200%',
-            transform: down ? 'translate(3px, 20px) scale(.85)' : spriteTransform[facing],
+            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
+            backgroundPosition: spritePosition[facing],
+            transform: spriteTransform[facing],
           }}
         />
       )}
