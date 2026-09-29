@@ -708,8 +708,9 @@
 }
 
 .wrestler-character-sprite--down {
-  background-repeat: no-repeat;
+  object-fit: contain;
   transform-origin: 50% 50%;
+  transform: translate(1px, 14px) scale(.98);
 }
 
 .wrestler-cube.is-down {
