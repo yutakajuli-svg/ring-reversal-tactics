@@ -7,7 +7,10 @@ import './ring-lab.css';
 const SIZE = 7;
 const RINGSIDE_SIZE = 9;
 const BOARD_CENTER_SIZE = RINGSIDE_SIZE;
-const ASSET_BASE = process.env.GITHUB_ACTIONS === 'true' ? '/ring-reversal-tactics' : '';
+// Vite embeds VITE_ values in both the rendered page and client updates.
+// GITHUB_ACTIONS is only available to the server build, so using it here
+// made newly rendered down images request /assets on GitHub Pages.
+const ASSET_BASE = import.meta.env.VITE_ASSET_BASE || '';
 const cubes = Array.from({ length: SIZE * SIZE }, (_, index) => ({
   r: Math.floor(index / SIZE),
   c: index % SIZE,
