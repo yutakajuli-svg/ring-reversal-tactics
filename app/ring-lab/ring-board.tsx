@@ -640,8 +640,8 @@ function projectCubeObject(
 
 export type CharacterFacing = RingSide | 'front' | 'back' | 'profile-left' | 'profile-right';
 const CARDINAL_SPRITES = {
-  front: {position:'0% 0%', transform:'translate(-7px, -10px)'},
-  back: {position:'100% 0%', transform:'translate(7px, -10px)'},
+  front: {position:'0% 0%', transform:'translate(-7px, calc(-10px - 10%))'},
+  back: {position:'100% 0%', transform:'translate(7px, calc(-10px - 10%))'},
   'profile-left': {position:'0% 100%', transform:'translate(-8px, -7px) scale(.99)'},
   'profile-right': {position:'100% 100%', transform:'translate(8px, -7px) scale(.99)'},
 } as const;
