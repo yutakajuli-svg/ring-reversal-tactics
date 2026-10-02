@@ -789,11 +789,13 @@ type BoardProps = {
   reserved: BoardLocation | null;
   reservedFacing: RingSide;
   onTurn: ((facing: RingSide) => void) | null;
+  directionTargets: {key:string;label:string;location:BoardLocation}[];
+  onDirection: (key:string) => void;
   runPath: {row:number;column:number}[];
   combatResult: CombatResultCue | null;
   ropeAnimation: {run:number;edge:RopeEdge|null};
 };
-export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, runPath, combatResult, ropeAnimation}: BoardProps) {
+export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, ropeAnimation}: BoardProps) {
   const destinationIsBlocked = (location:BoardLocation) => !isMoveReachable(location);
   const reboundPreviewKeys = new Set(runPath.map(p => p.row+'-'+p.column));
   const reboundTargetKey = reserved ? reserved.row+'-'+reserved.column : '';
@@ -1034,6 +1036,11 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
               );
             })}
           </svg>
+          {directionTargets.map(({key,label,location})=>{
+            const rotated=rotateWorldCell(location.row,location.column,boardRotation);
+            const floorTop=(location.area==='ringside'?60:18)+(rotated.row+rotated.column)*21-(location.area==='corner'?42:0);
+            return <button key={key} type="button" aria-label={label} className="rope-direction-target is-rope" onClick={()=>onDirection(key)} style={{left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`}}/>;
+          })}
           {reserved && !isSameLocation(reserved, wrestlers.red.location) && <WrestlerCube characterSprite="red" colorClass="corner-red" facing={rotateFacingWithBoard(reservedFacing, boardRotation)} label="赤の移動予約" style={boardPosition(reserved, boardRotation)} translucent />}
           {reserved && onTurn && <div className="piece-turn-controls" style={{...boardPosition(reserved,boardRotation),zIndex:145}} aria-label="予約した向きを回転">
             <button type="button" aria-label="右へ90度回転" onClick={()=>onTurn(turnFacing(reservedFacing,-1))}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button>
