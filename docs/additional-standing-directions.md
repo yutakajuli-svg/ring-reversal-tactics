@@ -32,3 +32,7 @@ Normal facing rotation remains the original four directions with 90-degree turns
 The extra four directions are reserved for diagonal corner-running presentation. The allowed route is a ring diagonal connecting the center and a corner: in the current 7x7 board, r=c or r+c=6, with center (3,3). Display a new direction only for a wrestler running along that diagonal toward its corner, either because the opponent threw/sent that wrestler toward the corner or because that wrestler chose to run toward the corner. A wrestler merely standing on a diagonal does not use a new facing. In an opponent throw, it is the runner, not automatically both wrestlers, that uses the running direction. Collision remains blocking; no passing through another wrestler.
 
 Keep combat-facing rules separate from these presentation-only directions until diagonal corner actions are integrated. The manual eight-direction display selector is an asset inspection control, not a selectable combat facing. These conditional corner-running actions are agreed design requirements; their gameplay integration is still pending.
+
+## Diagonal running integration (2026-10-03)
+
+The native match now uses companion directions only during diagonal corner travel. Each wrestler has an independent transient presentation direction; normal combat facing stays cardinal and travel presentation is cleared at exchange end. The accepted offsets, camera reversal and ordinary four-direction rotation are unchanged. Earlier pending-integration statements describe the historical asset preparation step.

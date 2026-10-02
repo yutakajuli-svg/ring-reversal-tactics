@@ -812,9 +812,10 @@ type BoardProps = {
   combatResults?: CombatResultCue[];
   cpuAttack?: boolean;
   spritePreview?: CharacterFacing | null;
+  runningFacing?: Partial<Record<WrestlerId,CharacterFacing>>;
   ropeAnimation: {run:number;edge:RopeEdge|null};
 };
-export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,ropeAnimation}: BoardProps) {
+export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,runningFacing={},ropeAnimation}: BoardProps) {
   const results=combatResults.length?combatResults:combatResult?[combatResult]:[];
   const destinationIsBlocked = (location:BoardLocation) => !isMoveReachable(location);
   const reboundPreviewKeys = new Set(runPath.map(p => p.row+'-'+p.column));
@@ -1068,7 +1069,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
           </div>}
           <WrestlerCube
             characterSprite="red"
-            spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):undefined}
+            spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):runningFacing.red?previewFacing(runningFacing.red,boardRotation):undefined}
             colorClass="corner-red"
             down={wrestlers.red.stance === 'down'}
             downPose={rules.vitals.red.pose}
@@ -1083,7 +1084,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
           />
           <WrestlerCube
             characterSprite="blue"
-            spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):undefined}
+            spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):runningFacing.blue?previewFacing(runningFacing.blue,boardRotation):undefined}
             colorClass="corner-blue"
             down={wrestlers.blue.stance === 'down'}
             downPose={rules.vitals.blue.pose}
