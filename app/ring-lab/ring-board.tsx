@@ -725,8 +725,8 @@ function WrestlerCube({
           data-facing={displayedFacing}
           style={{
             backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-${cardinal?'cardinal':'rounded'}-sprites.png)`,
-            backgroundPosition: cardinal?.position||spritePosition[facing],
-            transform: cardinal?.transform||spriteTransform[facing],
+            backgroundPosition: cardinal?.position||spritePosition[displayedFacing as RingSide],
+            transform: cardinal?.transform||spriteTransform[displayedFacing as RingSide],
           }}
         />
       )}
