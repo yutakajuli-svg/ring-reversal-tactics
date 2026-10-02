@@ -15,8 +15,10 @@ Red: Use case: identity-preserve. Asset type: transparent game character directi
 Blue: Use case: precise-object-edit. Make the BLUE version of Image 1's exact four-direction transparent sprite sheet. Image 2 shows the correct blue costume. Change ONLY the red singlet fabric and red wrist cuffs in Image 1 to the saturated royal blue from Image 2. Preserve all four poses, exact front/back/left-profile/right-profile angles, framing, 2x2 cell arrangement, hair, face, skin, adult muscular chibi proportions, white costume trim and side stripes, black boots, highlights, outlines, spacing and scale from Image 1. No other modifications, no extra characters or angles. Genuine transparent background, no text, no labels or shadows.
 ## Ring alignment and display preview
 
-2026-10-02: companion sheets are now connected to the standing character renderer. Original four-direction transforms and sprite files are unchanged. Additional front/back use y=calc(-10px - 10%) and x=-7/+7px; left/right profiles use y=-7px, x=-8/+8px and scale 0.99. The wrapper remains on the original cell, with existing depth and interaction geometry. A half-turn reverses the new directions as well.
+2026-10-02: companion sheets are now connected to the standing character renderer. Original four-direction transforms and sprite files are unchanged. Additional front/back use y=calc(-10px - 5%) and x=-7/+7px; left/right profiles use y=-7px, x=-8/+8px and scale 0.99. The wrapper remains on the original cell, with existing depth and interaction geometry. A half-turn reverses the new directions as well.
 
 In 試遊設定, キャラ８方向の表示確認 switches both standing characters between the eight visual directions. It affects rendering only; the reserved action, combat facing and movement rules remain unchanged. Publishing an exchange or resetting returns to normal rendering. Diagonal game actions are still pending integration.
 
 Front/back sprites were raised by an additional 10% of the standing sprite height (8.4px at the base 84px size), at user request. Other six directions remain unchanged.
+
+At user request, front/back were lowered by 5% from the raised position. Final additional offset is 5% upward (4.2px at the base 84px height). Other directions remain unchanged.
