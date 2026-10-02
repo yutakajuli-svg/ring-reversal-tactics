@@ -1,0 +1,10 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..', '..');
+const shell = fs.readFileSync(path.join(__dirname, 'trial-shell.html'), 'utf8');
+const engine = fs.readFileSync(path.join(__dirname, 'ring-engine.cjs'), 'utf8');
+const ui = fs.readFileSync(path.join(__dirname, 'trial-ui.js'), 'utf8');
+new Function(engine); new Function(ui);
+const output = shell.replace('/* ENGINE */', () => engine).replace('/* UI */', () => ui);
+fs.writeFileSync(path.join(root, 'public', 'ring-reversal-simultaneous-trial.html'), output);
+console.log('Built standalone playable trial.');
