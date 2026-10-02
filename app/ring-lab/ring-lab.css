@@ -16,7 +16,17 @@
 .native-controls { align-items: start; }
 .native-full { grid-column: 1 / -1; margin: 5px 0; }
 .native-controls p { line-height: 1.6; font-family: system-ui, sans-serif; }
-.native-plan { padding: 10px; background: #111c2a; border: 1px solid #58667a; line-height: 1.7; font-size: 13px; }
+.native-plan { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:8px 10px; background:#111c2a; border:1px solid #58667a; line-height:1.5; font:13px/1.5 system-ui,sans-serif; }
+.native-plan strong { color:#ffe09b; }
+.native-plan small { margin-left:auto; color:#aeb8ca; font-size:11px; }
+.simultaneous-native .rules-log, .simultaneous-native .lab-console { width:min(100%,900px); margin:0 auto; padding:10px 12px; border:1px solid #3d424d; border-radius:0; background:#111; font:13px/1.6 system-ui,sans-serif; }
+.simultaneous-native .rules-log summary, .simultaneous-native .lab-console__label { margin:0; color:#adb5c3; font-size:13px; letter-spacing:0; }
+.simultaneous-native .rules-log[open] summary, .simultaneous-native .lab-console[open] summary { margin-bottom:10px; }
+.simultaneous-native .native-help { order:7; }
+.simultaneous-native .native-log { order:8; }
+.simultaneous-native .lab-console { order:9; }
+.simultaneous-native .piece-turn-controls { width:160px; height:52px; transform:translate(-50%,30px); }
+.simultaneous-native .piece-turn-controls button { width:52px; height:52px; border:1px solid #b7953d; border-radius:50%; padding:8px; background:#111827ed; }
 .native-row { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
 .native-row button, .native-row select { min-height: 44px; padding: 7px 10px; border: 1px solid #6c778a; color: #fff; background: #222b3b; border-radius: 5px; font: inherit; }
 .native-row label { display: inline-flex; gap: 7px; align-items: center; flex-wrap: wrap; }
@@ -30,6 +40,8 @@
   .simultaneous-native .cube-study { min-height: 300px; }
   .native-row { gap: 5px; }
   .native-row button { font-size: 12px; }
+  .simultaneous-native .piece-turn-controls { width:200px; height:84px; transform:translate(-50%,28px); }
+  .simultaneous-native .piece-turn-controls button { width:84px; height:84px; padding:18px; }
 }
 
 .ring-lab-titlebar { order: 1; }

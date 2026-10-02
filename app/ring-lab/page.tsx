@@ -26,7 +26,7 @@ export default function RingLabPage() {
   const [shown,setShown] = useState<Match>(game);
   const [plan,setPlan] = useState<Plan>(()=>defaultPlan(game));
   const [busy,setBusy] = useState(false);
-  const [message,setMessage] = useState('緑のマスで移動を予約し、向きと行動を選んでください。');
+  const [message,setMessage] = useState('緑のマスで移動予約 → 技を選んで公開');
   const [revealed,setRevealed] = useState<{red:Plan;blue:Plan}|null>(null);
   const [rotation,setRotation] = useState<BoardRotation>(0);
   const [style,setStyle] = useState('balanced');
@@ -44,7 +44,7 @@ export default function RingLabPage() {
 
   const normalized = R.normalize(game,'red',plan) as Plan;
   const error = game.winner ? '' : R.validate(game,'red',plan,settings(style));
-  const fighters = Object.fromEntries((['red','blue'] as Id[]).map(id=>[id,{location:boardLocation(shown.fighters[id]),facing:ISO[shown.fighters[id].face],stance:shown.fighters[id].down?'down':'standing'}])) as Record<Id,WrestlerState>;
+  const fighters = Object.fromEntries((['red','blue'] as Id[]).map(id=>[id,{location:boardLocation(shown.fighters[id]),facing:ISO[id==='red'&&!busy?normalized.face:shown.fighters[id].face],stance:shown.fighters[id].down?'down':'standing'}])) as Record<Id,WrestlerState>;
   const poses:Record<Id,'prone'|'supine'> = {red:shown.fighters.red.pose||'prone',blue:shown.fighters.blue.pose||'prone'};
   const status = (id:Id) => {
     const f=shown.fighters[id];
@@ -58,7 +58,7 @@ export default function RingLabPage() {
     if(!reachable(location))return;
     const to={r:location.row,c:location.column,area:location.area};
     setPlan(p=>({...p,to,face:R.facingToward(to,game.fighters.blue) as Direction}));
-    setMessage('移動を予約しました。行動と向きを選び、同時公開してください。');
+    setMessage('移動予約済み。回転アイコンで向きを調整できます。');
   };
   const updatePlan = (change:Partial<Plan>) => {if(!busy)setPlan(p=>({...p,...change}));};
 
@@ -80,7 +80,7 @@ export default function RingLabPage() {
     cpu.current=next.winner?null:R.chooseCPU(next,settings(style)) as Plan;
     initializedRound.current=next.round;
     setGame(next);setShown(next);setPlan(defaultPlan(next));setRevealed(null);setEvent('idle');setBusy(false);committed.current=false;
-    setMessage(next.winner?next.finish:'次の攻防です。移動・向き・行動を予約してください。');
+    setMessage(next.winner?next.finish:'次の攻防。移動・行動を予約してください。');
   };
   const reset = (scene='normal') => {
     if(busy)return;
@@ -93,7 +93,7 @@ export default function RingLabPage() {
     if(scene==='dive'){Object.assign(next.fighters.red,{r:6,c:0,area:'corner',face:'right'});Object.assign(next.fighters.blue,{r:5,c:1,face:'left'});}
     if(scene==='outside'){Object.assign(next.fighters.red,{r:7,c:2,area:'ringside',face:'right'});Object.assign(next.fighters.blue,{r:7,c:3,area:'ringside',face:'left'});}
     cpu.current=R.chooseCPU(next,settings(style)) as Plan;initializedRound.current=next.round;
-    setGame(next);setShown(next);setPlan(defaultPlan(next));setRevealed(null);setEvent('idle');setMessage('緑のマスで移動を予約し、向きと行動を選んでください。');
+    setGame(next);setShown(next);setPlan(defaultPlan(next));setRevealed(null);setEvent('idle');setMessage('緑のマスで移動予約 → 技を選んで公開');
   };
   const saveLog=()=>{
     const blob=new Blob([JSON.stringify({version:'simultaneous-native-20261002',game,plan},null,2)],{type:'application/json'});
@@ -110,29 +110,31 @@ export default function RingLabPage() {
       <div className="fighter-hud__portrait" aria-hidden="true">{id==='red'?'R':'B'}</div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'RED':'BLUE'} CORNER</b><span>{id==='red'?'PLAYER':'CPU・予約済み'}</span></div><strong>{id==='red'?'RED':'BLUE'} WRESTLER</strong><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,shown.fighters[id].hp)/8*100}%`}} /></div><small>体力 <b>{Math.max(0,shown.fighters[id].hp)} / 8</b>　{status(id)}</small></div>
     </section>)}
     <RingBoard wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
-      reserved={busy||game.hold?null:boardLocation(normalized.to)} reservedFacing={ISO[normalized.face]} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
+      reserved={busy||game.hold?null:boardLocation(normalized.to)} reservedFacing={ISO[normalized.face]} onTurn={!busy&&!f.down&&!f.run&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing]}):null} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
       combatResult={event==='miss'?{outcome:'miss',actor:'red',subject:'red',run:game.round}:null} ropeAnimation={{run:shown.round,edge:event==='rope'?'right':null}} />
     <section className="match-message" role="status" aria-live="polite"><b>{busy?'同時攻防を解決中':'行動を予約'}</b><span>{message}</span></section>
     <section className="game-action-controls native-controls" aria-label="プレイヤーの行動">
-      <p className="native-full">{hint}</p>
-      <div className="native-full native-plan">{revealed?`公開：赤 ${R.NAMES[revealed.red.move]} ／ 青 ${R.NAMES[revealed.blue.move]}`:`赤の予約：${R.coordinate(normalized.to)} ／ ${DIRECTIONS.find(d=>d.key===normalized.face)?.label} ／ ${R.NAMES[plan.move]}　青：非公開`}</div>
+      <div className="native-full native-plan">{revealed?`赤 ${R.NAMES[revealed.red.move]} ／ 青 ${R.NAMES[revealed.blue.move]}`:<><strong>{R.NAMES[plan.move]}</strong><span>{R.coordinate(normalized.to)} ・ {DIRECTIONS.find(d=>d.key===normalized.face)?.label}</span><small>CPU：予約済み</small></>}</div>
       {(R.actions(game,'red') as Move[]).map(move=><button type="button" key={move} className={plan.move===move?'is-active':undefined} disabled={busy} onClick={()=>updatePlan({move})}>{R.NAMES[move]}</button>)}
-      {!f.down&&!game.hold&&<div className="native-full native-row" aria-label="攻撃する向き"><b>向き</b>{DIRECTIONS.map(d=><button key={d.key} type="button" disabled={busy||!!f.run||plan.move==='run'} className={normalized.face===d.key?'is-active':undefined} onClick={()=>updatePlan({face:d.key})}>{d.label}</button>)}</div>}
       {plan.move==='strike'&&<div className="native-full native-row"><b>打撃の距離</b>{[1,2].map(range=><button type="button" key={range} disabled={busy} className={plan.range===range?'is-active':undefined} onClick={()=>updatePlan({range})}>{range}マス狙い</button>)}</div>}
       {plan.move==='rope'&&<div className="native-full native-row"><b>投げる方向</b>{DIRECTIONS.map(d=><button key={d.key} type="button" disabled={busy} className={plan.ropeDir===d.key?'is-active':undefined} onClick={()=>updatePlan({ropeDir:d.key})}>{d.label}へ投げる</button>)}</div>}
       {plan.move==='run'&&<div className="native-full native-row"><b>走る方向</b>{R.runDirections(game,'red').map(d=><button key={d.key} type="button" disabled={busy} className={plan.runDir===d.key?'is-active':undefined} onClick={()=>updatePlan({runDir:d.key as Direction})}>{DIRECTIONS.find(x=>x.key===d.key)?.label}へ走る</button>)}</div>}
       {error&&<p className="native-full native-error" role="alert">{error}</p>}
       <button type="button" className="native-full native-publish" disabled={busy||!!error||!!game.winner} onClick={publish}>{busy?'攻防を解決中…':'せーので行動公開'}</button>
-      <p className="native-full native-note">CPUは攻防開始時に予約します。あなたの未公開の移動や行動、これから出るダイスは見ません。</p>
+      {(f.down||f.run||game.hold||game.doubleCount!==null)&&<p className="native-full native-note">{hint}</p>}
     </section>
-    <details className="rules-log"><summary>試遊ルール・判定ログ（{game.log.length}件）</summary>
+    <details className="rules-log native-help"><summary>操作・ルール</summary>
+      <p>{hint}</p><p>移動を予約したら、盤面の回転アイコンで向きを調整し、行動を選んで同時公開します。薄い赤の選手は移動先の予約です。</p>
+      <p>CPUは攻防開始時に予約します。あなたの未公開の移動や行動、これから出るダイスは見ません。</p>
       <p>同時公開・攻撃移動１マス。通常技１ダメージ、ダウンは復帰準備１回。カウンターは相手の攻撃を中止し、自分の予約行動を試みます。</p>
       <p>命中：打撃・投げ90%、立ち関節70%、ダウン関節80%。ロープ到達80%で戻り、20%で留まります。フォール・関節はロープ隣接ならHP０でも自動ブレイク。</p>
       <p>HP０以下の復帰：内部０/−１/−２/−３で60/50/40/30%、失敗ごとに＋10ポイント。投げ同士は40/40/20で崩し合い。両者ダウンは３回の復帰判定を仮採用しています。</p>
+    </details>
+    <details className="rules-log native-log"><summary>判定ログ（{game.log.length}件）</summary>
       <button type="button" onClick={saveLog}>試合ログを保存</button>
       <ol>{[...groups].reverse().map(([round,lines])=><li key={round}><strong>{round?`攻防 ${round}`:'試合開始'}</strong>{lines.map((line,i)=><p key={i}>{line}</p>)}</li>)}</ol>
     </details>
-    <details className="lab-console"><summary className="lab-console__label">試遊の設定・確認用配置</summary><div className="native-row">
+    <details className="lab-console"><summary className="lab-console__label">試遊設定</summary><div className="native-row">
       <label>CPU傾向 <select value={style} disabled={busy} onChange={e=>{const value=e.target.value;setStyle(value);cpu.current=R.chooseCPU(game,settings(value)) as Plan;}}><option value="balanced">バランス</option><option value="striker">打撃寄り</option><option value="power">投げ寄り</option><option value="technical">関節技寄り</option></select></label>
       <label>演出速度 <select value={speed} disabled={busy} onChange={e=>setSpeed(e.target.value)}><option value="normal">通常</option><option value="fast">速め</option><option value="instant">即時</option></select></label>
       <label>開始場面 <select value={scenario} disabled={busy} onChange={e=>setScenario(e.target.value)}><option value="normal">通常・HP８</option><option value="late">終盤・双方HP１</option><option value="ground">青がダウン</option><option value="rope">ロープ際・青HP０</option><option value="running">青がロープから戻る</option><option value="dive">コーナーの飛び技</option><option value="outside">場外の打撃・投げ</option></select></label>
