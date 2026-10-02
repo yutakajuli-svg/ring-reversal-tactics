@@ -32,10 +32,9 @@
 .native-controls .native-publish { background: #f2bf43; color: #191506; font-weight: bold; }
 .native-error { color: #ffa9a9; }
 .native-note { color: #aeb8ca; font-size: 12px; }
-.simultaneous-native .wrestler-cube.is-translucent { opacity: .4; }
+.fixed-manual-banner { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; padding:12px; background:#172034; color:#ffe09b; font:14px system-ui,sans-serif; }
+.fixed-manual-banner button { padding:8px 12px; cursor:pointer; }
 @media (max-width: 430px) {
-  .simultaneous-native .cube-board { transform: translateX(-50%) scale(.52); }
-  .simultaneous-native .cube-study { min-height: 300px; }
   .native-row { gap: 5px; }
   .native-row button { font-size: 12px; }
 }

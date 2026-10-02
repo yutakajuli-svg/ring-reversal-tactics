@@ -789,13 +789,16 @@ type BoardProps = {
   reserved: BoardLocation | null;
   reservedFacing: RingSide;
   onTurn: ((facing: RingSide) => void) | null;
-  directionTargets: {key:string;label:string;location:BoardLocation}[];
+  directionTargets: {key:string;label:string;kind?:string;location:BoardLocation}[];
   onDirection: (key:string) => void;
   runPath: {row:number;column:number}[];
   combatResult: CombatResultCue | null;
+  combatResults?: CombatResultCue[];
+  cpuAttack?: boolean;
   ropeAnimation: {run:number;edge:RopeEdge|null};
 };
-export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, ropeAnimation}: BoardProps) {
+export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,ropeAnimation}: BoardProps) {
+  const results=combatResults.length?combatResults:combatResult?[combatResult]:[];
   const destinationIsBlocked = (location:BoardLocation) => !isMoveReachable(location);
   const reboundPreviewKeys = new Set(runPath.map(p => p.row+'-'+p.column));
   const reboundTargetKey = reserved ? reserved.row+'-'+reserved.column : '';
@@ -1036,10 +1039,10 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
               );
             })}
           </svg>
-          {directionTargets.map(({key,label,location})=>{
+          {directionTargets.map(({key,label,kind='rope',location})=>{
             const rotated=rotateWorldCell(location.row,location.column,boardRotation);
             const floorTop=(location.area==='ringside'?60:18)+(rotated.row+rotated.column)*21-(location.area==='corner'?42:0);
-            return <button key={key} type="button" aria-label={label} className="rope-direction-target is-rope" onClick={()=>onDirection(key)} style={{left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`}}/>;
+            return <button key={key} type="button" aria-label={label} className={`rope-direction-target is-${kind}`} onClick={()=>onDirection(key)} style={{left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`}}/>;
           })}
           {reserved && !isSameLocation(reserved, wrestlers.red.location) && <WrestlerCube characterSprite="red" colorClass="corner-red" facing={rotateFacingWithBoard(reservedFacing, boardRotation)} label="赤の移動予約" style={boardPosition(reserved, boardRotation)} translucent />}
           {reserved && onTurn && <div className="piece-turn-controls" style={{...boardPosition(reserved,boardRotation),zIndex:145}} aria-label="予約した向きを回転">
@@ -1053,7 +1056,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
             downPose={rules.vitals.red.pose}
             facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}
             label="プレイヤー選手コマ"
-            reaction={combatResult?.subject === 'red' ? combatResult.outcome : undefined}
+            reaction={results.find(r=>r.subject==='red')?.outcome}
             style={boardPosition(wrestlers.red.location, boardRotation)}
             translucent={
               wrestlers.red.location.area === 'corner'
@@ -1067,25 +1070,26 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
             downPose={rules.vitals.blue.pose}
             facing={rotateFacingWithBoard(wrestlers.blue.facing, boardRotation)}
             label="CPU選手コマ"
-            reaction={combatResult?.subject === 'blue' ? combatResult.outcome : undefined}
+            reaction={results.find(r=>r.subject==='blue')?.outcome}
             style={boardPosition(wrestlers.blue.location, boardRotation)}
             translucent={
               wrestlers.blue.location.area === 'corner'
               && isTransparentCorner(wrestlers.blue.location.row, wrestlers.blue.location.column, boardRotation)
             }
           />
-          {combatResult && (
+          {cpuAttack&&<div aria-label="CPUの公開行動：攻撃" className="cpu-action-bubble" role="status" style={{...boardPosition(wrestlers.blue.location,boardRotation),zIndex:148}}><MenkoAttackIcon/></div>}
+          {results.map(combatResult => (
             <div
               aria-live="assertive"
               className={`combat-result-cue is-${combatResult.outcome}`}
-              key={combatResult.run}
+              key={`${combatResult.run}-${combatResult.actor}`}
               role="status"
               style={{ ...boardPosition(wrestlers[combatResult.subject].location, boardRotation), zIndex: 149 }}
             >
               <i aria-hidden="true" />
               <strong>{combatResult.outcome === 'hit' ? 'HIT!' : 'MISS'}</strong>
             </div>
-          )}
+          ))}
           {/* The ring's near apron is a separate visual surface. It can cover
               only the lower part of a piece at the edge without making that
               cell unavailable or changing the piece's board coordinate. */}
