@@ -22,3 +22,13 @@ In 試遊設定, キャラ８方向の表示確認 switches both standing charac
 Front/back sprites were raised by an additional 10% of the standing sprite height (8.4px at the base 84px size), at user request. Other six directions remain unchanged.
 
 At user request, front/back were lowered by 5% from the raised position. Final additional offset is 5% upward (4.2px at the base 84px height). Other directions remain unchanged.
+
+## FIX: appearance and restricted use (2026-10-02)
+
+The user accepted the appearance at 2a8b832 as FIX. Preserve the existing four directions and the added four sheets, sizes and offsets during unrelated changes. Front/back keep translate X=-7/+7px, Y=calc(-10px - 5%); profiles keep X=-8/+8px, Y=-7px, scale=0.99. Change only upon a user request.
+
+Normal facing rotation remains the original four directions with 90-degree turns. Do not add front, back or the two profiles to normal rotation, walking or generic attacks.
+
+The extra four directions are reserved for diagonal corner-running presentation. The allowed route is a ring diagonal connecting the center and a corner: in the current 7x7 board, r=c or r+c=6, with center (3,3). Display a new direction only for a wrestler running along that diagonal toward its corner, either because the opponent threw/sent that wrestler toward the corner or because that wrestler chose to run toward the corner. A wrestler merely standing on a diagonal does not use a new facing. In an opponent throw, it is the runner, not automatically both wrestlers, that uses the running direction. Collision remains blocking; no passing through another wrestler.
+
+Keep combat-facing rules separate from these presentation-only directions until diagonal corner actions are integrated. The manual eight-direction display selector is an asset inspection control, not a selectable combat facing. These conditional corner-running actions are agreed design requirements; their gameplay integration is still pending.
