@@ -638,8 +638,20 @@ function projectCubeObject(
   return null;
 }
 
+export type CharacterFacing = RingSide | 'front' | 'back' | 'profile-left' | 'profile-right';
+const CARDINAL_SPRITES = {
+  front: {position:'0% 0%', transform:'translate(-7px, -10px)'},
+  back: {position:'100% 0%', transform:'translate(7px, -10px)'},
+  'profile-left': {position:'0% 100%', transform:'translate(-8px, -7px) scale(.99)'},
+  'profile-right': {position:'100% 100%', transform:'translate(8px, -7px) scale(.99)'},
+} as const;
+function previewFacing(facing:CharacterFacing,rotation:BoardRotation):CharacterFacing {
+  if(facing in CARDINAL_SPRITES)return rotation===2?({front:'back',back:'front','profile-left':'profile-right','profile-right':'profile-left'} as const)[facing as keyof typeof CARDINAL_SPRITES]:facing;
+  return rotateFacingWithBoard(facing as RingSide,rotation);
+}
 function WrestlerCube({
   characterSprite = false,
+  spriteFacing,
   colorClass,
   down = false,
   downPose = 'prone',
@@ -650,6 +662,7 @@ function WrestlerCube({
   translucent = false,
 }: {
   characterSprite?: false | 'red' | 'blue';
+  spriteFacing?: CharacterFacing;
   colorClass: 'corner-red' | 'corner-blue';
   down?: boolean;
   downPose?: 'prone' | 'supine';
@@ -682,6 +695,8 @@ function WrestlerCube({
     'left-back': 'translate(-6px, -8px)',
   };
 
+  const displayedFacing=spriteFacing||facing;
+  const cardinal=displayedFacing in CARDINAL_SPRITES?CARDINAL_SPRITES[displayedFacing as keyof typeof CARDINAL_SPRITES]:null;
   return (
     <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}${reaction ? ` is-${reaction}` : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
       <b className="cube-face cube-top" />
@@ -706,11 +721,12 @@ function WrestlerCube({
       {characterSprite && !down && (
         <b
           aria-hidden="true"
-          className="wrestler-character-sprite"
+          className={`wrestler-character-sprite${cardinal?' wrestler-character-sprite--cardinal':''}`}
+          data-facing={displayedFacing}
           style={{
-            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-rounded-sprites.png)`,
-            backgroundPosition: spritePosition[facing],
-            transform: spriteTransform[facing],
+            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-${cardinal?'cardinal':'rounded'}-sprites.png)`,
+            backgroundPosition: cardinal?.position||spritePosition[facing],
+            transform: cardinal?.transform||spriteTransform[facing],
           }}
         />
       )}
@@ -795,9 +811,10 @@ type BoardProps = {
   combatResult: CombatResultCue | null;
   combatResults?: CombatResultCue[];
   cpuAttack?: boolean;
+  spritePreview?: CharacterFacing | null;
   ropeAnimation: {run:number;edge:RopeEdge|null};
 };
-export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,ropeAnimation}: BoardProps) {
+export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,ropeAnimation}: BoardProps) {
   const results=combatResults.length?combatResults:combatResult?[combatResult]:[];
   const destinationIsBlocked = (location:BoardLocation) => !isMoveReachable(location);
   const reboundPreviewKeys = new Set(runPath.map(p => p.row+'-'+p.column));
@@ -1051,6 +1068,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
           </div>}
           <WrestlerCube
             characterSprite="red"
+            spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):undefined}
             colorClass="corner-red"
             down={wrestlers.red.stance === 'down'}
             downPose={rules.vitals.red.pose}
@@ -1065,6 +1083,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
           />
           <WrestlerCube
             characterSprite="blue"
+            spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):undefined}
             colorClass="corner-blue"
             down={wrestlers.blue.stance === 'down'}
             downPose={rules.vitals.blue.pose}

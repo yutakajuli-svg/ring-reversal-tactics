@@ -1435,3 +1435,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+.native-sprite-preview { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; }
+.native-sprite-preview small { flex-basis:100%; color:#aeb8ca; }
+.wrestler-character-sprite--cardinal { transform-origin:50% 85%; }

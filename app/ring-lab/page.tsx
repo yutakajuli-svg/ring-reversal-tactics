@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { RingTrial as R } from '../../lib/simultaneous-rules';
-import { RingBoard, type BoardLocation, type BoardRotation, type RingSide, type WrestlerState } from './ring-board';
+import { RingBoard, type CharacterFacing, type BoardLocation, type BoardRotation, type RingSide, type WrestlerState } from './ring-board';
 import './ring-lab.css';
 import FixedManualTest from './fixed-manual-test';
 
@@ -27,6 +27,7 @@ export default function RingLabPage() {
   const [game,setGame] = useState<Match>(initial);
   const [shown,setShown] = useState<Match>(game);
   const [plan,setPlan] = useState<Plan>(()=>defaultPlan(game));
+  const [spritePreview,setSpritePreview] = useState<CharacterFacing|null>(null);
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState('緑のマスで移動予約 → 技を選んで公開');
   const [revealed,setRevealed] = useState<{red:Plan;blue:Plan}|null>(null);
@@ -100,7 +101,7 @@ export default function RingLabPage() {
     const next=result.state as Match;
     cpu.current=next.winner?null:R.chooseCPU(next,settings(style)) as Plan;
     initializedRound.current=next.round;
-    setGame(next);setShown(next);setPlan(defaultPlan(next));setRevealed(null);setEvent('idle');setCues([]);setRopeEdge(null);setBusy(false);committed.current=false;
+    setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setRevealed(null);setEvent('idle');setCues([]);setRopeEdge(null);setBusy(false);committed.current=false;
     setMessage(next.winner?next.finish:'次の攻防。移動・行動を予約してください。');
   };
   const reset = (scene='normal') => {
@@ -114,7 +115,7 @@ export default function RingLabPage() {
     if(scene==='dive'){Object.assign(next.fighters.red,{r:6,c:0,area:'corner',face:'right'});Object.assign(next.fighters.blue,{r:5,c:1,face:'left'});}
     if(scene==='outside'){Object.assign(next.fighters.red,{r:7,c:2,area:'ringside',face:'right'});Object.assign(next.fighters.blue,{r:7,c:3,area:'ringside',face:'left'});}
     cpu.current=R.chooseCPU(next,settings(style)) as Plan;initializedRound.current=next.round;
-    setGame(next);setShown(next);setPlan(defaultPlan(next));setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('緑のマスで移動予約 → 技を選んで公開');
+    setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('緑のマスで移動予約 → 技を選んで公開');
   };
   const saveLog=()=>{
     const blob=new Blob([JSON.stringify({version:'simultaneous-native-20261002',game,plan},null,2)],{type:'application/json'});
@@ -140,7 +141,7 @@ export default function RingLabPage() {
     {(['blue','red'] as Id[]).map(id=><section key={id} className={`fighter-hud fighter-hud--${id==='red'?'player':'cpu'}`} aria-label={`${id==='red'?'赤':'青'}コーナー選手情報`}>
       <div className="fighter-hud__portrait" aria-hidden="true">{id==='red'?'R':'B'}</div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'RED':'BLUE'} CORNER</b><span>{id==='red'?'PLAYER':'CPU・予約済み'}</span></div><strong>{id==='red'?'RED':'BLUE'} WRESTLER</strong><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,shown.fighters[id].hp)/8*100}%`}} /></div><small>体力 <b>{Math.max(0,shown.fighters[id].hp)} / 8</b>　{status(id)}</small></div>
     </section>)}
-    <RingBoard wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
+    <RingBoard spritePreview={busy?null:spritePreview} wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
       reserved={busy||game.hold?null:boardLocation(directionPicker?.kind==='run'?f:normalized.to)} reservedFacing={ISO[normalized.face]} onTurn={!busy&&!directionPicker&&!f.down&&!f.skip&&!f.run&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing]}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
       combatResult={null} combatResults={cues} cpuAttack={event==='reveal'&&!!revealed&&['strike','throw','submission','rope','dive','pull-down','knock-down'].includes(revealed.blue.move)} ropeAnimation={{run:cueRun,edge:ropeEdge?visibleRopeEdge||null:null}} />
     <section className="match-message" role="status" aria-live="polite"><b>{busy?'同時攻防を解決中':directionPicker?'方向を選択':'行動を予約'}</b><span>{directionPicker?'盤面の色が付いたマスを選択してください。':message}</span>{lastRoll!==null&&<em>D100 {lastRoll}</em>}</section>
@@ -169,7 +170,9 @@ export default function RingLabPage() {
       <label>演出速度 <select value={speed} disabled={busy} onChange={e=>setSpeed(e.target.value)}><option value="normal">通常</option><option value="fast">速め</option><option value="instant">即時</option></select></label>
       <label>開始場面 <select value={scenario} disabled={busy} onChange={e=>setScenario(e.target.value)}><option value="normal">通常・HP８</option><option value="late">終盤・双方HP１</option><option value="ground">青がダウン</option><option value="rope">ロープ際・青HP０</option><option value="running">青がロープから戻る</option><option value="dive">コーナーの飛び技</option><option value="outside">場外の打撃・投げ</option></select></label>
       <button type="button" disabled={busy} onClick={()=>reset(scenario)}>この場面から</button><button type="button" disabled={busy} onClick={()=>reset()}>試合を初期化</button><button type="button" disabled={busy} onClick={()=>{const next=rotation===0?2:0;setRotation(next);setGame(s=>({...s,view:next}));}}>リングを反対側から見る</button><button type="button" disabled={busy} onClick={()=>setManual(true)}>前版の手動確認を開く</button>
-    </div></details>
+    </div>
+      <label className="native-sprite-preview">キャラ８方向の表示確認 <select value={spritePreview||'match'} disabled={busy} onChange={e=>setSpritePreview(e.target.value==='match'?null:e.target.value as CharacterFacing)}><option value="match">試合の向きに戻す</option><option value="right-front">右手前（既存）</option><option value="front">正面（追加）</option><option value="left-front">左手前（既存）</option><option value="profile-left">左横（追加）</option><option value="left-back">左奥（既存）</option><option value="back">背面（追加）</option><option value="right-back">右奥（既存）</option><option value="profile-right">右横（追加）</option></select><small>立ち姿の表示だけを切り替えます。選択した行動・向きは変わりません。</small></label>
+    </details>
     {game.winner&&<div className="match-result" role="dialog" aria-modal="true" aria-label="試合結果"><div><p>{game.finish} ／ {game.round-1}攻防</p><h2>{game.winner==='draw'?'DRAW':game.winner==='red'?'RED WIN':'BLUE WIN'}</h2><button type="button" onClick={saveLog}>試合ログを保存</button><button type="button" onClick={()=>reset()}>もう一度試合する</button></div></div>}
   </main>;
 }
