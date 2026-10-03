@@ -654,6 +654,7 @@ function WrestlerCube({
   spriteFacing,
   colorClass,
   down = false,
+  groggy = false,
   downPose = 'prone',
   facing,
   label,
@@ -665,6 +666,7 @@ function WrestlerCube({
   spriteFacing?: CharacterFacing;
   colorClass: 'corner-red' | 'corner-blue';
   down?: boolean;
+  groggy?: boolean;
   downPose?: 'prone' | 'supine';
   facing: RingSide;
   label: string;
@@ -695,10 +697,10 @@ function WrestlerCube({
     'left-back': 'translate(-6px, -8px)',
   };
 
-  const displayedFacing=spriteFacing||facing;
+  const displayedFacing=groggy?facing:spriteFacing||facing;
   const cardinal=displayedFacing in CARDINAL_SPRITES?CARDINAL_SPRITES[displayedFacing as keyof typeof CARDINAL_SPRITES]:null;
   return (
-    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}${reaction ? ` is-${reaction}` : ''}`} aria-label={`${label}${down ? '（ダウン）' : ''}`} style={style}>
+    <i className={`tile-cube wrestler-cube ${colorClass}${characterSprite ? ' has-character-sprite' : ''}${translucent ? ' is-translucent' : ''}${down ? ' is-down' : ''}${reaction ? ` is-${reaction}` : ''}`} aria-label={`${label}${down ? '（ダウン）' : groggy?'（グロッキー）':''}`} style={style}>
       <b className="cube-face cube-top" />
       <b className="cube-face cube-left" />
       <b className="cube-face cube-right" />
@@ -724,7 +726,7 @@ function WrestlerCube({
           className={`wrestler-character-sprite${cardinal?' wrestler-character-sprite--cardinal':''}`}
           data-facing={displayedFacing}
           style={{
-            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-${cardinal?'cardinal':'rounded'}-sprites.png)`,
+            backgroundImage: `url(${ASSET_BASE}/assets/wrestler-${characterSprite}-${groggy?'groggy':cardinal?'cardinal':'rounded'}-sprites.png)`,
             backgroundPosition: cardinal?.position||spritePosition[displayedFacing as RingSide],
             transform: cardinal?.transform||spriteTransform[displayedFacing as RingSide],
           }}
@@ -812,10 +814,11 @@ type BoardProps = {
   combatResults?: CombatResultCue[];
   cpuAttack?: boolean;
   spritePreview?: CharacterFacing | null;
+  groggies?: Partial<Record<WrestlerId,boolean>>;
   runningFacing?: Partial<Record<WrestlerId,CharacterFacing>>;
   ropeAnimation: {run:number;edge:RopeEdge|null};
 };
-export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,runningFacing={},ropeAnimation}: BoardProps) {
+export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,groggies={},runningFacing={},ropeAnimation}: BoardProps) {
   const results=combatResults.length?combatResults:combatResult?[combatResult]:[];
   const destinationIsBlocked = (location:BoardLocation) => !isMoveReachable(location);
   const reboundPreviewKeys = new Set(runPath.map(p => p.row+'-'+p.column));
@@ -1072,6 +1075,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
             spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):runningFacing.red?previewFacing(runningFacing.red,boardRotation):undefined}
             colorClass="corner-red"
             down={wrestlers.red.stance === 'down'}
+            groggy={groggies.red}
             downPose={rules.vitals.red.pose}
             facing={rotateFacingWithBoard(wrestlers.red.facing, boardRotation)}
             label="プレイヤー選手コマ"
@@ -1087,6 +1091,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
             spriteFacing={spritePreview?previewFacing(spritePreview,boardRotation):runningFacing.blue?previewFacing(runningFacing.blue,boardRotation):undefined}
             colorClass="corner-blue"
             down={wrestlers.blue.stance === 'down'}
+            groggy={groggies.blue}
             downPose={rules.vitals.blue.pose}
             facing={rotateFacingWithBoard(wrestlers.blue.facing, boardRotation)}
             label="CPU選手コマ"
