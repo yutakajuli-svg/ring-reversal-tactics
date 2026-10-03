@@ -115,7 +115,7 @@
   border-color: currentColor;
   border-style: solid;
   border-width: 0 2px 0 0;
-  background: repeating-linear-gradient(135deg, #272727 0 6px, #1c1c1c 6px 12px);
+  background: #e8e8e8;
   font-size: 42px;
   font-weight: 900;
 }
@@ -138,7 +138,7 @@
   animation: portrait-red-flash 360ms linear;
 }
 
-.fighter-hud[data-expression="damage"] {
+.fighter-hud[data-impact="true"] {
   animation: portrait-hit-shake 360ms steps(2, jump-none);
 }
 @keyframes portrait-hit-shake {
@@ -153,7 +153,7 @@
   16%,50% { opacity:.66; background:#f00; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fighter-hud__impact, .fighter-hud[data-expression="damage"] { animation:none; }
+  .fighter-hud__impact, .fighter-hud[data-impact="true"] { animation:none; }
 }
 
 .fighter-hud--cpu .fighter-hud__portrait {
