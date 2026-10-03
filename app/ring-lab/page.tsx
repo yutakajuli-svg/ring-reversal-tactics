@@ -5,6 +5,7 @@ import { RingTrial as R } from '../../lib/simultaneous-rules';
 import { RingBoard, type CharacterFacing, type BoardLocation, type BoardRotation, type RingSide, type WrestlerState } from './ring-board';
 import './ring-lab.css';
 import FixedManualTest from './fixed-manual-test';
+import { OPPONENT_PORTRAITS, PORTRAIT_TIMING, damagedPortraits, portraitSource, type PortraitHp } from '../../lib/portrait-presentation';
 
 type Id = 'red' | 'blue';
 type Direction = 'up' | 'right' | 'down' | 'left';
@@ -15,7 +16,7 @@ type Fighter = Cell & { face:Direction; hp:number; maxHp?:number; outsideTurns?:
 type Match = { view?:BoardRotation;round:number; fighters:Record<Id,Fighter>; hold:{attacker:Id;defender:Id;count:number;dr:number;dc:number;posture:string}|null; doubleCount:number|null; winner:Id|'draw'|null; finish:string; history:{red:string;blue:string;distance:number}[]; log:{round:number;text:string}[] };
 type Plan = { move:Move; to:Cell; face:Direction; range:number; ropeDir:TravelDirection; runDir:TravelDirection; carryDir:Direction; returnDir:Direction };
 type Cue={outcome:'hit'|'miss';actor:Id;subject:Id;run:number};
-type Frame = { state:Match; message:string;kind:string;ms:number;roll?:number|null;ropeEdge?:'top'|'right'|'bottom'|'left'|null;cues?:Cue[] };
+type Frame = { state:Match; message:string;kind:string;ms:number;roll?:number|null;ropeEdge?:'top'|'right'|'bottom'|'left'|null;cues?:Cue[];damages?:Partial<PortraitHp> };
 const ISO:Record<Direction,RingSide> = {up:'right-back',right:'right-front',down:'left-front',left:'left-back'};
 const DIRECTIONS:{key:Direction;label:string}[] = [{key:'up',label:'右奥'},{key:'right',label:'右手前'},{key:'down',label:'左手前'},{key:'left',label:'左奥'}];
 const TRAVEL_DIRECTIONS:{key:TravelDirection;label:string}[]=[...DIRECTIONS,{key:'up-left',label:'奥のコーナー'},{key:'up-right',label:'右のコーナー'},{key:'down-right',label:'手前のコーナー'},{key:'down-left',label:'左のコーナー'}];
@@ -45,6 +46,18 @@ export default function RingLabPage() {
   const [lastRoll,setLastRoll] = useState<number|null>(null);
   const [ropeEdge,setRopeEdge] = useState<Frame['ropeEdge']>(null);
   const [cueRun,setCueRun] = useState(0);
+  const [opponentPortrait,setOpponentPortrait] = useState<string>(OPPONENT_PORTRAITS[0]);
+  const [damageFaces,setDamageFaces] = useState<Id[]>([]);
+  const [portraitImpact,setPortraitImpact] = useState(0);
+  const [displayedHp,setDisplayedHp] = useState<PortraitHp>(()=>({red:game.fighters.red.hp,blue:game.fighters.blue.hp}));
+  const portraitBase = import.meta.env.BASE_URL;
+  useEffect(()=>{setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);},[]);
+  useEffect(()=>{
+    // Preload each matching expression to avoid a blank portrait at impact.
+    for(const character of ['red-protagonist',opponentPortrait])for(const damage of [false,true]){
+      const image=new Image();image.src=portraitSource(portraitBase,character,damage);
+    }
+  },[opponentPortrait,portraitBase]);
   const cpu = useRef<Plan|null>(null);
   const committed = useRef(false);
   const playback = useRef(0);
@@ -96,8 +109,32 @@ export default function RingLabPage() {
     committed.current=true;setBusy(true);setRevealed(result.plans);cpu.current=null;
     const run=++playback.current;
     const factor=speed==='instant'?0:speed==='fast'?.38:1;
+    let previousHp:PortraitHp={red:game.fighters.red.hp,blue:game.fighters.blue.hp};
     for(const frame of result.frames as Frame[]){
       if(playback.current!==run)return;
+      const nextHp:PortraitHp={red:frame.state.fighters.red.hp,blue:frame.state.fighters.blue.hp};
+      const damaged=damagedPortraits(previousHp,nextHp,frame.damages);
+      if(damaged.length&&factor){
+        setShown(frame.state);setRotation(frame.state.view||0);setCues(frame.cues||[]);setLastRoll(frame.roll??null);setRopeEdge(frame.ropeEdge||null);setCueRun(n=>n+1);
+        setDamageFaces(damaged);setPortraitImpact(n=>n+1);setEvent('damage');
+        setMessage(damaged.map(id=>`${id==='red'?'赤':'青'}に ${frame.damages?.[id]||previousHp[id]-nextHp[id]} ダメージ！`).join(' ／ '));
+        const from=previousHp;
+        await new Promise<void>(resolve=>{
+          const started=performance.now(),duration=PORTRAIT_TIMING.feedback*factor;
+          const tick=(now:number)=>{
+            if(playback.current!==run){resolve();return;}
+            const progress=Math.min(1,(now-started)/duration);
+            setDisplayedHp({red:Math.max(0,from.red)+(Math.max(0,nextHp.red)-Math.max(0,from.red))*progress,blue:Math.max(0,from.blue)+(Math.max(0,nextHp.blue)-Math.max(0,from.blue))*progress});
+            if(progress<1)requestAnimationFrame(tick);else resolve();
+          };
+          requestAnimationFrame(tick);
+        });
+        const remaining=(PORTRAIT_TIMING.line+PORTRAIT_TIMING.afterglow+PORTRAIT_TIMING.outro-PORTRAIT_TIMING.feedback)*factor;
+        await new Promise(resolve=>window.setTimeout(resolve,remaining));
+        if(playback.current!==run)return;
+        setDamageFaces([]);
+      }
+      setDisplayedHp(nextHp);previousHp=nextHp;
       setShown(frame.state);setMessage(frame.message);setEvent(frame.kind);setRotation(frame.state.view||0);setCues(frame.cues||[]);setLastRoll(frame.roll??null);setRopeEdge(frame.ropeEdge||null);setCueRun(n=>n+1);
       if(factor)await new Promise(resolve=>window.setTimeout(resolve,frame.ms*factor));
     }
@@ -106,6 +143,7 @@ export default function RingLabPage() {
     cpu.current=next.winner?null:R.chooseCPU(next,settings(style)) as Plan;
     initializedRound.current=next.round;
     setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setRevealed(null);setEvent('idle');setCues([]);setRopeEdge(null);setBusy(false);committed.current=false;
+    setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
     setMessage(next.winner?next.finish:'次の攻防。移動・行動を予約してください。');
   };
   const reset = (scene='normal') => {
@@ -128,6 +166,8 @@ export default function RingLabPage() {
     if(scene==='red-groggy'){Object.assign(next.fighters.red,{groggy:true});}
     if(scene==='outside'){Object.assign(next.fighters.red,{r:7,c:2,area:'ringside',face:'right'});Object.assign(next.fighters.blue,{r:7,c:3,area:'ringside',face:'left'});}
     cpu.current=R.chooseCPU(next,settings(style)) as Plan;initializedRound.current=next.round;
+    setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);
+    setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
     setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('緑のマスで移動予約 → 技を選んで公開');
   };
   const saveLog=()=>{
@@ -157,8 +197,9 @@ export default function RingLabPage() {
   const visibleRopeEdge=rotation===2?({top:'bottom',right:'left',bottom:'top',left:'right'} as const)[ropeEdge||'top']:ropeEdge;
   return <main className="ring-lab simultaneous-native" data-rule-version="simultaneous-native-20261003-outside">
     <header className="ring-lab-titlebar"><div><p>WRESTLING TACTICS / RING LAB</p><h1>RING MATCH</h1></div><strong>攻防 {game.round}</strong></header>
-    {(['blue','red'] as Id[]).map(id=><section key={id} className={`fighter-hud fighter-hud--${id==='red'?'player':'cpu'}`} aria-label={`${id==='red'?'赤':'青'}コーナー選手情報`}>
-      <div className="fighter-hud__portrait" aria-hidden="true">{id==='red'?'R':'B'}</div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'RED':'BLUE'} CORNER</b><span>{id==='red'?'PLAYER':'CPU・予約済み'}</span></div><strong>{id==='red'?'RED':'BLUE'} WRESTLER</strong><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,shown.fighters[id].hp)/R.maxHp(shown.fighters[id])*100}%`}} /></div><small>体力 <b>{Math.max(0,shown.fighters[id].hp)} / {R.maxHp(shown.fighters[id])}</b>　{status(id)}{R.area(shown.fighters[id])==='ringside'?` ／ 場外 ${(shown.fighters[id].outsideTurns||0)*4}/20`:''}</small></div>
+    {(['blue','red'] as Id[]).map(id=><section key={id} className={`fighter-hud fighter-hud--${id==='red'?'player':'cpu'}`} data-expression={damageFaces.includes(id)?'damage':'normal'} style={damageFaces.includes(id)?{animationDuration:`${PORTRAIT_TIMING.feedback*(speed==='fast'?.38:1)}ms`}:undefined} aria-label={`${id==='red'?'赤':'青'}コーナー選手情報`}>
+      {damageFaces.includes(id)&&<span key={portraitImpact} className="fighter-hud__impact" aria-hidden="true" style={{animationDuration:`${PORTRAIT_TIMING.feedback*(speed==='fast'?.38:1)}ms`}}/>}
+      <div className="fighter-hud__portrait"><img src={portraitSource(portraitBase,id==='red'?'red-protagonist':opponentPortrait,damageFaces.includes(id))} alt={`${id==='red'?'主人公':'対戦相手'}・${damageFaces.includes(id)?'ダメージ':'通常'}表情`} draggable={false}/></div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'RED':'BLUE'} CORNER</b><span>{id==='red'?'PLAYER':'CPU・予約済み'}</span></div><strong>{id==='red'?'RED':'BLUE'} WRESTLER</strong><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,displayedHp[id])/R.maxHp(shown.fighters[id])*100}%`,transition:busy?'none':undefined}} /></div><small>体力 <b>{Math.max(0,Math.round(displayedHp[id]))} / {R.maxHp(shown.fighters[id])}</b>　{status(id)}{R.area(shown.fighters[id])==='ringside'?` ／ 場外 ${(shown.fighters[id].outsideTurns||0)*4}/20`:''}</small></div>
     </section>)}
     <RingBoard groggies={{red:shown.fighters.red.groggy,blue:shown.fighters.blue.groggy}} spritePreview={busy?null:spritePreview} runningFacing={{red:busy?TRAVEL_SPRITES[shown.fighters.red.travelFacing!]:undefined,blue:busy?TRAVEL_SPRITES[shown.fighters.blue.travelFacing!]:undefined}} wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
       reserved={busy||game.hold?null:boardLocation(directionPicker?.kind==='run'?f:normalized.to)} reservedFacing={ISO[normalized.face]} onTurn={!busy&&!directionPicker&&!f.down&&!f.skip&&!f.groggy&&!f.run&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing]}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}

@@ -86,6 +86,7 @@
 }
 
 .fighter-hud {
+  position: relative;
   display: flex;
   width: min(100%, 900px);
   min-height: 96px;
@@ -105,6 +106,8 @@
 }
 
 .fighter-hud__portrait {
+  position: relative;
+  overflow: hidden;
   display: grid;
   place-items: center;
   width: 104px;
@@ -115,6 +118,42 @@
   background: repeating-linear-gradient(135deg, #272727 0 6px, #1c1c1c 6px 12px);
   font-size: 42px;
   font-weight: 900;
+}
+
+.fighter-hud__portrait img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  image-rendering: pixelated;
+}
+
+.fighter-hud__impact {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  animation: portrait-red-flash 360ms linear;
+}
+
+.fighter-hud[data-expression="damage"] {
+  animation: portrait-hit-shake 360ms steps(2, jump-none);
+}
+@keyframes portrait-hit-shake {
+  0%,100% { transform:translate(0); }
+  20% { transform:translate(-4px,1px); }
+  40% { transform:translate(4px,-1px); }
+  60% { transform:translate(-3px,0); }
+  80% { transform:translate(3px,1px); }
+}
+@keyframes portrait-red-flash {
+  0%,100% { opacity:0; }
+  16%,50% { opacity:.66; background:#f00; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fighter-hud__impact, .fighter-hud[data-expression="damage"] { animation:none; }
 }
 
 .fighter-hud--cpu .fighter-hud__portrait {
