@@ -1064,7 +1064,12 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
           {directionTargets.map(({key,label,kind='rope',location})=>{
             const rotated=rotateWorldCell(location.row,location.column,boardRotation);
             const floorTop=(location.area==='ringside'?60:18)+(rotated.row+rotated.column)*21-(location.area==='corner'?42:0);
-            return <button key={key} type="button" aria-label={label} className={`rope-direction-target is-${kind}`} onClick={()=>onDirection(key)} style={{left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`}} />;
+            const position={left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`};
+            const floorDepth=location.area==='ringside'?2:location.area==='corner'?61+rotated.row+rotated.column:24;
+            return <span key={key}>
+              <span aria-hidden="true" className="target-floor-highlight" data-kind={kind} style={{...position,zIndex:floorDepth}} />
+              <button type="button" aria-label={label} className={`rope-direction-target target-hit-area is-${kind}`} onClick={()=>onDirection(key)} style={{...position,background:'transparent',border:0,boxShadow:'none',filter:'none'}} />
+            </span>;
           })}
           {bubble&&<span className="board-info-bubble" role="status" style={{...boardPosition(bubble.location,boardRotation),zIndex:170}}>{bubble.text}</span>}
           {reserved && onTurn && <div className="piece-turn-controls" style={{...boardPosition(reserved,boardRotation),zIndex:145}} aria-label="予約した向きを回転">

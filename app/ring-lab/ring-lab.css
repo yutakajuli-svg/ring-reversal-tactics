@@ -606,7 +606,8 @@
   box-shadow: 0 0 13px #50d9ad99;
 }
 
-.rope-direction-target {
+.rope-direction-target,
+.target-floor-highlight {
   position: absolute;
   z-index: 150;
   width: 84px;
@@ -1525,7 +1526,7 @@
 .simultaneous-native .rope-direction-target.is-run-selected,
 .simultaneous-native .rope-direction-target.is-attack,
 .simultaneous-native .rope-direction-target.is-attack-selected {
-  background:#50d9ad38; border-color:#d9fff1; box-shadow:none; animation:none;
+  background:#50d9ad; border-color:#d9fff1; box-shadow:none; animation:none;
 }
 .simultaneous-native .rope-direction-target.is-run-selected,
 .simultaneous-native .rope-direction-target.is-attack-selected { border:5px solid #fff; filter:brightness(1.12); }
@@ -1533,12 +1534,20 @@
 .native-mode { display:flex; gap:8px; }
 .native-mode button { flex:1; }
 
-/* Tint the floor gently; target overlays must leave pawns and ropes visible. */
+/* Paint choices on the floor, below pawns; keep the tap surface transparent. */
 .simultaneous-native .tile-cube.is-move-reachable .cube-top,
 .simultaneous-native .corner-cube.is-move-reachable .cube-top {
-  background:linear-gradient(#50d9ad38,#50d9ad38),#c7cbd0;
+  background:#50d9ad;
 }
 .simultaneous-native .ringside-tile.is-move-reachable {
-  background:linear-gradient(#50d9ad38,#50d9ad38),#d8cfba;
+  background:#50d9ad;
   box-shadow:none;
 }
+.target-floor-highlight { pointer-events:none; }
+.simultaneous-native .target-floor-highlight[data-kind^="run"],
+.simultaneous-native .target-floor-highlight[data-kind^="attack"] {
+  background:#50d9ad; border-color:#d9fff1; box-shadow:none; animation:none;
+}
+.simultaneous-native .target-floor-highlight[data-kind$="-selected"] { border:5px solid #fff; }
+.target-floor-highlight[data-kind="corner"] { background:#ef634e; }
+.target-floor-highlight[data-kind="barrier"] { background:#ee8c36; }
