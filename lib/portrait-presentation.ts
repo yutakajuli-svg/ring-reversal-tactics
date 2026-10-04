@@ -1,4 +1,4 @@
-export const OPPONENT_PORTRAITS = ['a-brown-short', 'b-black-bob', 'c-burgundy-long', 'd-short-dark', 'e-black-long', 'f-green'] as const;
+export const OPPONENT_PORTRAITS = ['a-brown-short', 'b-black-bob', 'c-burgundy-long', 'd-short-dark', 'e-black-long', 'f-green', 'g-plump-bob'] as const;
 export type PortraitId = 'red' | 'blue';
 export type PortraitHp = Record<PortraitId, number>;
 // MENKO: status feedback and HP 360ms; one line 720ms; afterglow 360ms; outro 320ms.

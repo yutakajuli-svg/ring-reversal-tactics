@@ -73,6 +73,16 @@
       "asset": "f-green-damage.png",
       "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\green-hair-damage-face-64x64.png",
       "sha256": "24b100288245875d1afcb2c9cef7e0e964eaf4265a9c1f3033f4df06a5aaa17a"
+    },
+    {
+      "asset": "g-plump-bob-normal.png",
+      "source": "C:/Users/yutak/Documents/Codex/2026-09-30/ring-reversal/outputs/character-portraits/plump-character-trial-v1/plump-normal-face-64x64.png",
+      "sha256": "1cd0df42e0e67dc7be3f46e321cb1dfc9c9df865493bfc522da2e7a2e5024c14"
+    },
+    {
+      "asset": "g-plump-bob-damage.png",
+      "source": "C:/Users/yutak/Documents/Codex/2026-09-30/ring-reversal/outputs/character-portraits/plump-character-trial-v1/plump-damage-face-64x64.png",
+      "sha256": "1c6d4a32c893da9f519d5ed72cea63d5a7b3a7a2c8c00e46105cc30ea8ac4711"
     }
   ]
 }

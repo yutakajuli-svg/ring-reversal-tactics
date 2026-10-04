@@ -22,4 +22,4 @@ x=R.resolve(s,plan(s,'red','strike'),plan(s,'blue','rest'),{},()=>.5);
 assert.ok(x.frames.some(f=>f.damages.blue===1&&f.state.fighters.blue.hp===-3));
 s=scenario(8);x=R.resolve(s,plan(s,'red','strike'),plan(s,'blue','strike'),{},()=>.98);
 assert.ok(x.frames.every(f=>Object.keys(f.damages).length===0));
-console.log('PASS: both faces for simultaneous hits, capped HP damage recorded once, miss keeps normal faces, all 14 assets and GitHub Pages paths.');
+console.log('PASS: both faces for simultaneous hits, capped HP damage recorded once, miss keeps normal faces, all 16 assets and GitHub Pages paths.');
