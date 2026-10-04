@@ -1520,3 +1520,15 @@
   .simultaneous-native .cube-board { transform:translateX(-50%) scale(.48); }
   .native-fighters .fighter-hud__portrait { width:60px; flex-basis:60px; }
 }
+
+.simultaneous-native .rope-direction-target.is-run,
+.simultaneous-native .rope-direction-target.is-run-selected,
+.simultaneous-native .rope-direction-target.is-attack,
+.simultaneous-native .rope-direction-target.is-attack-selected {
+  background:#50d9ad; border-color:#d9fff1; box-shadow:none; animation:none;
+}
+.simultaneous-native .rope-direction-target.is-run-selected,
+.simultaneous-native .rope-direction-target.is-attack-selected { border:5px solid #fff; filter:brightness(1.12); }
+.board-info-bubble { position:absolute; width:max-content; padding:5px 12px; background:#fff; color:#171717; border:2px solid #333; border-radius:6px; font:bold 22px/1.2 sans-serif; pointer-events:none; transform:translate(-50%,-65px); }
+.native-mode { display:flex; gap:8px; }
+.native-mode button { flex:1; }

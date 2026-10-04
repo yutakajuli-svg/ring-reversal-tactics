@@ -99,6 +99,7 @@ for(let m=0;m<100;m++){
   let s=R.initial();
   for(let t=0;t<200&&!s.winner;t++){
     const mirrored=R.copy(s);mirrored.fighters={red:R.copy(s.fighters.blue),blue:R.copy(s.fighters.red)};
+    for(const f of Object.values(mirrored.fighters))if(f.run?.attacker)f.run.attacker=R.other(f.run.attacker);
     if(mirrored.hold){mirrored.hold.attacker=R.other(mirrored.hold.attacker);mirrored.hold.defender=R.other(mirrored.hold.defender);}
     mirrored.history=mirrored.history.map(h=>({...h,red:h.blue,blue:h.red}));
     const rp=R.chooseCPU(mirrored,{},rng),bp=R.chooseCPU(s,{},rng);const x=R.resolve(s,rp,bp,{},rng);
