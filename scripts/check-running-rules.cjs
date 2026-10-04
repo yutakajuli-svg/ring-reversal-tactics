@@ -64,6 +64,15 @@ test('ロープ停止で赤は無傷グロッキー、青は次に走れる',()=
  const s=adjacent(),x=resolve(s,plan(s,'red','rope',{ropeDir:'right'}),plan(s,'blue','move'),dice(99));
  assert.equal(x.state.fighters.blue.c,6);assert.ok(x.state.fighters.red.groggy);assert.equal(x.state.fighters.red.hp,8);assert.ok(R.sprintOptions(x.state,'blue').length);
 });
+test('戻る相手は近・遠とも迎撃が当たったマスで停止',()=>{
+ for(const range of [1,2])for(const move of range===1?['strike','throw','submission']:['strike']){
+  const s=adjacent(),target={r:3,c:2+range,area:'ring'};
+  const x=resolve(s,plan(s,'red','rope',{ropeDir:'right',ropeIntercept:{move,target,range}}),plan(s,'blue','move'),dice(50,40,99));
+  assert.equal(x.state.fighters.blue.hp,7);assert.ok(R.same(x.state.fighters.blue,target));assert.equal(x.state.fighters.blue.run,null);
+  const impact=x.frames.findIndex(f=>/迎撃が決まった/.test(f.message));assert.ok(impact>=0);
+  for(const frame of x.frames.slice(impact))assert.ok(R.same(frame.state.fighters.blue,target),'命中後に走り抜けない');
+ }
+});
 test('赤ミス青成功はカウンター、双方ミスは赤のみ無傷グロッキー',()=>{
  for(const counter of [true,false]){
   const s=adjacent(),x=resolve(s,plan(s,'red','rope',{ropeDir:'right'}),plan(s,'blue','move'),dice(50,99,counter?50:99,99));
