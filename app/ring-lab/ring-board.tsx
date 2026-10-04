@@ -806,6 +806,7 @@ type BoardProps = {
   onSelect: (location: BoardLocation) => void;
   reserved: BoardLocation | null;
   reservedFacing: RingSide;
+  reservedSpriteFacing?: CharacterFacing;
   onTurn: ((facing: RingSide) => void) | null;
   directionTargets: {key:string;label:string;kind?:string;location:BoardLocation}[];
   onDirection: (key:string) => void;
@@ -819,7 +820,7 @@ type BoardProps = {
   ropeAnimation: {run:number;edge:RopeEdge|null};
   bubble?: {location:BoardLocation;text:string}|null;
 };
-export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,groggies={},runningFacing={},ropeAnimation,bubble=null}: BoardProps) {
+export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:isMoveReachable, onSelect:moveActiveWrestler, reserved, reservedFacing, reservedSpriteFacing, onTurn, directionTargets, onDirection, runPath, combatResult, combatResults=[],cpuAttack=false,spritePreview=null,groggies={},runningFacing={},ropeAnimation,bubble=null}: BoardProps) {
   const results=combatResults.length?combatResults:combatResult?[combatResult]:[];
   const destinationIsBlocked = (location:BoardLocation) => !isMoveReachable(location);
   const reboundPreviewKeys = new Set(runPath.map(p => p.row+'-'+p.column));
@@ -1072,6 +1073,9 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
             </span>;
           })}
           {bubble&&<span className="board-info-bubble" role="status" style={{...boardPosition(bubble.location,boardRotation),zIndex:170}}>{bubble.text}</span>}
+          {reserved && <span aria-hidden="true" className={`movement-reservation${isSameLocation(reserved,wrestlers.red.location)?' is-arrived':''}`}>
+            <WrestlerCube characterSprite="red" spriteFacing={reservedSpriteFacing?previewFacing(reservedSpriteFacing,boardRotation):undefined} colorClass="corner-red" facing={rotateFacingWithBoard(reservedFacing,boardRotation)} label="赤の移動予定コマ" style={boardPosition(reserved,boardRotation)} />
+          </span>}
           {reserved && onTurn && <div className="piece-turn-controls" style={{...boardPosition(reserved,boardRotation),zIndex:145}} aria-label="予約した向きを回転">
             <button type="button" aria-label="右へ90度回転" onClick={()=>onTurn(turnFacing(reservedFacing,-1))}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button>
             <button type="button" aria-label="左へ90度回転" onClick={()=>onTurn(turnFacing(reservedFacing,1))}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>

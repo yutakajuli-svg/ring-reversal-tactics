@@ -723,12 +723,29 @@
 }
 
 .wrestler-cube {
+  --pawn-move-duration: 280ms;
   /* Every board cell uses the same foot position, so one shared transition
      keeps diagonal moves and the ring-to-ringside step equally smooth. */
   will-change: left, top;
   transition:
-    left 280ms cubic-bezier(.22, .8, .25, 1),
-    top 280ms cubic-bezier(.22, .8, .25, 1);
+    left var(--pawn-move-duration) cubic-bezier(.22, .8, .25, 1),
+    top var(--pawn-move-duration) cubic-bezier(.22, .8, .25, 1);
+}
+
+.movement-reservation .wrestler-cube {
+  opacity: .42;
+  pointer-events: none;
+  transition:
+    left var(--pawn-move-duration) cubic-bezier(.22, .8, .25, 1),
+    top var(--pawn-move-duration) cubic-bezier(.22, .8, .25, 1),
+    opacity 0s;
+}
+
+/* The logical cell updates before the existing slide finishes. Keep the
+   destination visible until the real piece has completed that same slide. */
+.movement-reservation.is-arrived .wrestler-cube {
+  opacity: 0;
+  transition-delay: 0s, 0s, var(--pawn-move-duration);
 }
 
 .wrestler-cube.is-hit {
