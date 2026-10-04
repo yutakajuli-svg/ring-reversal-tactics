@@ -1,0 +1,78 @@
+{
+  "cropSize": [
+    64,
+    64
+  ],
+  "assets": [
+    {
+      "asset": "red-protagonist-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\protagonist-crop-v1\\red-protagonist-normal-face-64x64.png",
+      "sha256": "fca9871d1594140116ba8a602c981804d3c019990b52a7d9dd45ae777c0b0eae"
+    },
+    {
+      "asset": "red-protagonist-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\protagonist-crop-v1\\red-protagonist-damage-face-64x64.png",
+      "sha256": "c41eed12775fe41c9d86df0c419dbe2af57fab14a2308e96b19f897475022640"
+    },
+    {
+      "asset": "a-brown-short-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\brunette-normal-face-64x64.png",
+      "sha256": "08326e8f72351ca1c1aa4547086bfff3e6f7bf7b6a884e18bf455bae479062e8"
+    },
+    {
+      "asset": "a-brown-short-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\brunette-damage-face-64x64.png",
+      "sha256": "e7dc62abf90896c99da33fba680be08ca0bde21d234ffcb6162b4365c656b440"
+    },
+    {
+      "asset": "b-black-bob-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\black-bob-normal-face-64x64.png",
+      "sha256": "43a36e3c6f0b1d8b451701ee982090c57939d63cc034882f5c000151a0a81563"
+    },
+    {
+      "asset": "b-black-bob-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\black-bob-damage-face-64x64.png",
+      "sha256": "2330ccb9949b7da829c9aba385d566c383ecc6cf62edfa40d9ed300ec4867b8d"
+    },
+    {
+      "asset": "c-burgundy-long-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\burgundy-long-normal-face-64x64.png",
+      "sha256": "55e1b172054b83fa5ed416d91f9abfdc4d72d25bf10171a25705e63d68fc994a"
+    },
+    {
+      "asset": "c-burgundy-long-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\burgundy-long-damage-face-64x64.png",
+      "sha256": "d5dbfbf01faaf67bc24d3b73d88331162e0ec6e2f9c9c9b3acf4d43131861974"
+    },
+    {
+      "asset": "d-short-dark-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\short-dark-normal-face-64x64.png",
+      "sha256": "6ea85979b2635b2424d836549c30e9c301297b042363efe4032c57c47dab1e00"
+    },
+    {
+      "asset": "d-short-dark-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\short-dark-damage-face-64x64.png",
+      "sha256": "ee3082788772ce798349efdaab8b87267ff098d0a231b23aed679c2b29b4a4af"
+    },
+    {
+      "asset": "e-black-long-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\black-long-normal-face-64x64.png",
+      "sha256": "a266a94d529880c4e48298e27459a18900bf57200ff105208daf72fd0e389ade"
+    },
+    {
+      "asset": "e-black-long-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\black-long-damage-face-64x64.png",
+      "sha256": "b1c78b9913f96141c83c510952df74582291f59396cfdf15e9e26717ceaf88c1"
+    },
+    {
+      "asset": "f-green-normal.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\green-hair-normal-face-64x64.png",
+      "sha256": "7627109987dd587ef75cb421e8034715f93a6208316f5bc0b8ec00b4c24662f7"
+    },
+    {
+      "asset": "f-green-damage.png",
+      "source": "C:\\Users\\yutak\\Documents\\Codex\\2026-09-30\\ring-reversal\\outputs\\character-portraits\\damage-faces-v1\\green-hair-damage-face-64x64.png",
+      "sha256": "24b100288245875d1afcb2c9cef7e0e964eaf4265a9c1f3033f4df06a5aaa17a"
+    }
+  ]
+}

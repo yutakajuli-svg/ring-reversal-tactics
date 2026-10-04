@@ -10,7 +10,7 @@ assert.deepEqual(damagedPortraits({red:8,blue:8},{red:8,blue:8},{}),[]);
 for(const character of ['red-protagonist',...OPPONENT_PORTRAITS])for(const damage of [false,true]){
  const source=portraitSource('/ring-reversal-tactics/',character,damage);
  assert.ok(source.startsWith('/ring-reversal-tactics/assets/portraits/'));
- assert.ok(fs.existsSync(path.join(__dirname,'../public/assets/portraits',path.basename(source))));
+ assert.ok(fs.existsSync(path.join(__dirname,'../public/assets/portraits/faces-v2',path.basename(source))));
 }
 function scenario(hp){const s=R.initial();s.fighters.blue.c=3;for(const id of R.IDS)s.fighters[id].hp=hp;return s;}
 function plan(s,id,move){return {...R.defaultPlan(s,id),move,range:1};}

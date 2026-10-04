@@ -8,5 +8,5 @@ export function damagedPortraits(previous: PortraitHp, next: PortraitHp, damages
   return (['red', 'blue'] as const).filter(id => (damages?.[id] ?? 0) > 0 || next[id] < previous[id]);
 }
 export function portraitSource(base: string, character: string, damaged: boolean) {
-  return `${base}assets/portraits/${character}-${damaged ? 'damage' : 'normal'}.png`;
+  return `${base}assets/portraits/faces-v2/${character}-${damaged ? 'damage' : 'normal'}.png`;
 }
