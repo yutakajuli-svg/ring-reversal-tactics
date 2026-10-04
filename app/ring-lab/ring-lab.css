@@ -1478,3 +1478,45 @@
 .native-sprite-preview { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; }
 .native-sprite-preview small { flex-basis:100%; color:#aeb8ca; }
 .wrestler-character-sprite--cardinal { transform-origin:50% 85%; }
+
+/* Compact simultaneous-match UI; the previous manual lab keeps its own layout. */
+.native-fighters { order:2; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; width:min(100%,900px); margin:0 auto 8px; }
+.native-fighters .fighter-hud { min-width:0; min-height:96px; margin:0; box-shadow:none; }
+.native-fighters .fighter-hud--player { order:1; }
+.native-fighters .fighter-hud--cpu { order:2; }
+.native-fighters .fighter-hud__body { min-width:0; display:flex; flex-direction:column; justify-content:center; }
+.native-fighters .fighter-hud__meter { margin-top:6px; }
+.native-fighters .fighter-hud__heading { letter-spacing:.04em; }
+.native-fighter-state { display:block; }
+.simultaneous-native .native-controls { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.simultaneous-native .native-plan { margin:0; padding:4px 7px; border:0; background:transparent; font-size:12px; }
+.simultaneous-native .native-full { margin:0; }
+.simultaneous-native .native-controls .native-publish { grid-column:1/-1; color:#191506; }
+.simultaneous-native .match-message { gap:6px; min-height:42px; padding:6px 10px; }
+.simultaneous-native .match-message b { flex-shrink:0; }
+.rope-direction-target.is-run, .rope-direction-target.is-run-selected { color:#fff; border-color:#8dc5ff; background:#164a76; font:bold 27px/1 sans-serif; }
+.rope-direction-target.is-run-selected { color:#171717; border-color:#fff4bf; background:#f2bf43; }
+@media (max-width:680px) {
+  .simultaneous-native { padding:8px 7px 24px; }
+  .simultaneous-native .ring-lab-titlebar { margin-bottom:6px; padding-bottom:5px; }
+  .simultaneous-native .ring-lab-titlebar p { display:none; }
+  .simultaneous-native .ring-lab-titlebar h1 { font-size:23px; }
+  .native-fighters { gap:6px; margin-bottom:6px; }
+  .native-fighters .fighter-hud { min-height:88px; }
+  .native-fighters .fighter-hud__body { padding:5px 6px; }
+  .native-fighters .fighter-hud__body small { font-size:11px; line-height:1.35; }
+  .native-fighters .fighter-hud__portrait { width:72px; flex-basis:72px; }
+  .simultaneous-native .native-controls { padding:6px; gap:5px; box-shadow:none; }
+  .simultaneous-native .native-controls button { min-height:42px; padding:6px 3px; font-size:12px; }
+  .simultaneous-native .match-message { flex-direction:row; font-size:12px; margin:0 auto 5px; line-height:1.4; }
+  .simultaneous-native .native-note { font-size:11px; }
+}
+@media (max-width:430px) {
+  .simultaneous-native .cube-study { min-height:290px; box-shadow:none; }
+  .simultaneous-native .cube-board { top:18px; transform:translateX(-50%) scale(.55); }
+}
+@media (max-width:360px) {
+  .simultaneous-native .cube-study { min-height:260px; }
+  .simultaneous-native .cube-board { transform:translateX(-50%) scale(.48); }
+  .native-fighters .fighter-hud__portrait { width:60px; flex-basis:60px; }
+}

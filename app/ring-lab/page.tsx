@@ -33,7 +33,7 @@ export default function RingLabPage() {
   const [plan,setPlan] = useState<Plan>(()=>defaultPlan(game));
   const [spritePreview,setSpritePreview] = useState<CharacterFacing|null>(null);
   const [busy,setBusy] = useState(false);
-  const [message,setMessage] = useState('緑のマスで移動予約 → 技を選んで公開');
+  const [message,setMessage] = useState('緑のマスで移動、↗で走る。技を選んで公開。');
   const [revealed,setRevealed] = useState<{red:Plan;blue:Plan}|null>(null);
   const [rotation,setRotation] = useState<BoardRotation>(0);
   const [style,setStyle] = useState('balanced');
@@ -69,7 +69,8 @@ export default function RingLabPage() {
 
   const normalized = R.normalize(game,'red',plan) as Plan;
   const error = game.winner ? '' : R.validate(game,'red',plan,settings(style));
-  const fighters = Object.fromEntries((['red','blue'] as Id[]).map(id=>[id,{location:boardLocation(shown.fighters[id]),facing:ISO[id==='red'&&!busy?normalized.face:shown.fighters[id].face],stance:shown.fighters[id].down?'down':'standing'}])) as Record<Id,WrestlerState>;
+  const previewCell = !busy&&!game.hold&&!game.fighters.red.run&&!['run','carry','return'].includes(plan.move) ? normalized.to : shown.fighters.red;
+  const fighters = Object.fromEntries((['red','blue'] as Id[]).map(id=>[id,{location:boardLocation(id==='red'?previewCell:shown.fighters[id]),facing:ISO[id==='red'&&!busy?normalized.face:shown.fighters[id].face],stance:shown.fighters[id].down?'down':'standing'}])) as Record<Id,WrestlerState>;
   const poses:Record<Id,'prone'|'supine'> = {red:shown.fighters.red.pose||'prone',blue:shown.fighters.blue.pose||'prone'};
   const status = (id:Id) => {
     const f=shown.fighters[id];
@@ -80,12 +81,12 @@ export default function RingLabPage() {
     return f.run?`${R.coordinate(f.run.origin)}へ戻る進路が固定`:'立ち状態';
   };
   const hasDamageFace = (id:Id) => damageFaces.includes(id) || shown.fighters[id].down || !!shown.fighters[id].groggy;
-  const reachable = (location:BoardLocation) => !busy && !directionPicker && !['run','carry','return'].includes(plan.move) && !game.winner
+  const reachable = (location:BoardLocation) => !busy && !directionPicker && !['carry','return'].includes(plan.move) && !game.winner
     && R.canSelectCell(game,'red',{r:location.row,c:location.column,area:location.area});
   const select = (location:BoardLocation) => {
     if(!reachable(location))return;
     const to={r:location.row,c:location.column,area:location.area};
-    setPlan(p=>({...p,to}));
+    setPlan(p=>({...p,to,move:R.distance(game.fighters.red,to)>1?'move':p.move==='run'?'strike':p.move}));
     setMessage('移動予約済み。回転アイコンで向きを調整できます。');
   };
   const updatePlan = (change:Partial<Plan>) => {if(!busy)setPlan(p=>({...p,...change}));};
@@ -95,8 +96,14 @@ export default function RingLabPage() {
     updatePlan({move});
   };
   const chooseDirection = (key:string) => {
-    if(!directionPicker||busy)return;
+    if(busy)return;
     const direction=key as TravelDirection;
+    if(!directionPicker){
+      if(!R.runIntent(game,'red',direction)||!R.actions(game,'red').includes('run'))return;
+      updatePlan({move:'run',runDir:direction,to:{r:game.fighters.red.r,c:game.fighters.red.c,area:game.fighters.red.area}});
+      setMessage(`${TRAVEL_DIRECTIONS.find(d=>d.key===direction)?.label}へ走る予定です。公開するか、別のマス・技を選んで変更できます。`);
+      return;
+    }
     updatePlan(directionPicker.kind==='rope'?{ropeDir:direction}:directionPicker.kind==='run'?{runDir:direction}:directionPicker.kind==='carry'?{carryDir:direction as Direction}:{returnDir:direction as Direction});
     setDirectionPicker(null);setMessage('方向を予約しました。行動公開で攻防を判定します。');
   };
@@ -169,7 +176,7 @@ export default function RingLabPage() {
     cpu.current=R.chooseCPU(next,settings(style)) as Plan;initializedRound.current=next.round;
     setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);
     setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
-    setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('緑のマスで移動予約 → 技を選んで公開');
+    setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('緑のマスで移動、↗で走る。技を選んで公開。');
   };
   const saveLog=()=>{
     const blob=new Blob([JSON.stringify({version:'simultaneous-native-20261003-outside',game,plan},null,2)],{type:'application/json'});
@@ -178,8 +185,10 @@ export default function RingLabPage() {
   const runPath = game.fighters.red.run ? R.path(game.fighters.red,game.fighters.red.run.origin,null,16)||[] : [];
   const groups = new Map<number,string[]>();for(const line of game.log){if(!groups.has(line.round))groups.set(line.round,[]);groups.get(line.round)!.push(line.text);}
   const f=game.fighters.red;
-  const actionPreview={...game,fighters:{...game.fighters,red:{...f,...normalized.to,face:normalized.face}}};
-  const availableActions=[...new Set([...R.actions(actionPreview,'red').filter(move=>!['carry','return'].includes(move)),...R.actions(game,'red').filter(move=>['carry','return'].includes(move))])] as Move[];
+  const actionPreview={...game,fighters:{...game.fighters,red:{...f,...(plan.move==='run'?R.cell(f):normalized.to),face:normalized.face}}};
+  const availableActions=([...new Set([...R.actions(actionPreview,'red').filter(move=>!['carry','return'].includes(move)),...R.actions(game,'red').filter(move=>['carry','return'].includes(move))])] as Move[])
+    .filter(move=>move!=='run'&&(R.distance(f,normalized.to)<=1||['move','carry','return'].includes(move)||plan.move==='run'))
+    .filter(move=>move!=='pin'||!R.attackError(actionPreview,'red',{...normalized,move},settings(style)));
   const directionTargets = directionPicker ? TRAVEL_DIRECTIONS.flatMap(d=>{
     if(directionPicker.kind==='carry'||directionPicker.kind==='return'){
       const intent=directionPicker.kind==='carry'?R.carryIntent(game,'red',d.key):R.returnIntent(game,'red',d.key);
@@ -191,6 +200,9 @@ export default function RingLabPage() {
     }
     const target=R.ropeTarget({...f,...normalized.to},game.fighters.blue,d.key);
     return target?[{key:d.key,label:`ロープスロー：${d.label}方向${target.kind==='corner'?'（コーナー衝突）':''}`,kind:target.kind,location:boardLocation(target.location)}]:[];
+  }):!busy&&!game.winner&&R.actions(game,'red').includes('run')?TRAVEL_DIRECTIONS.flatMap(d=>{
+    const intent=R.runIntent(game,'red',d.key);
+    return intent?[{key:d.key,label:`${R.diagonal(d.key)?'コーナー':'ロープ'}へ走る：${d.label}方向`,kind:plan.move==='run'&&plan.runDir===d.key?'run-selected':'run',location:boardLocation(intent.rebound?intent.origin:intent.goal)}]:[];
   }):[];
   const hint=game.doubleCount!==null?'両者ダウンのカウント中です。復帰準備を公開すると双方の起き上がりを判定します。':game.hold?'関節技の維持・解除と脱出を同じ攻防で解決します。':f.run?'戻る進路は固定です。途中で当てる攻撃を選べます。':f.skip?'場外への落下後は、この手を休んでから次の行動へ進みます。':f.groggy?'この手は立ったまま体勢を立て直します。移動・攻撃は次の手から。':f.down?'この手は復帰準備。自分では移動できません。攻撃は立った次の手から。':'攻撃と同じ手は１マス移動、移動のみは２マス。選択した移動は公開後に行います。';
 
@@ -198,25 +210,26 @@ export default function RingLabPage() {
   const visibleRopeEdge=rotation===2?({top:'bottom',right:'left',bottom:'top',left:'right'} as const)[ropeEdge||'top']:ropeEdge;
   return <main className="ring-lab simultaneous-native" data-rule-version="simultaneous-native-20261003-outside">
     <header className="ring-lab-titlebar"><div><p>WRESTLING TACTICS / RING LAB</p><h1>RING MATCH</h1></div><strong>攻防 {game.round}</strong></header>
-    {(['blue','red'] as Id[]).map(id=><section key={id} className={`fighter-hud fighter-hud--${id==='red'?'player':'cpu'}`} data-expression={hasDamageFace(id)?'damage':'normal'} data-impact={damageFaces.includes(id)?'true':'false'} style={damageFaces.includes(id)?{animationDuration:`${PORTRAIT_TIMING.feedback*(speed==='fast'?.38:1)}ms`}:undefined} aria-label={`${id==='red'?'赤':'青'}コーナー選手情報`}>
+    <div className="native-fighters">{(['red','blue'] as Id[]).map(id=><section key={id} className={`fighter-hud fighter-hud--${id==='red'?'player':'cpu'}`} data-expression={hasDamageFace(id)?'damage':'normal'} data-impact={damageFaces.includes(id)?'true':'false'} style={damageFaces.includes(id)?{animationDuration:`${PORTRAIT_TIMING.feedback*(speed==='fast'?.38:1)}ms`}:undefined} aria-label={`${id==='red'?'赤':'青'}コーナー選手情報`}>
       {damageFaces.includes(id)&&<span key={portraitImpact} className="fighter-hud__impact" aria-hidden="true" style={{animationDuration:`${PORTRAIT_TIMING.feedback*(speed==='fast'?.38:1)}ms`}}/>}
-      <div className="fighter-hud__portrait"><img src={portraitSource(portraitBase,id==='red'?'red-protagonist':opponentPortrait,hasDamageFace(id))} alt={`${id==='red'?'主人公':'対戦相手'}・${hasDamageFace(id)?'ダメージ':'通常'}表情`} draggable={false}/></div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'RED':'BLUE'} CORNER</b><span>{id==='red'?'PLAYER':'CPU・予約済み'}</span></div><strong>{id==='red'?'RED':'BLUE'} WRESTLER</strong><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,displayedHp[id])/R.maxHp(shown.fighters[id])*100}%`,transition:busy?'none':undefined}} /></div><small>体力 <b>{Math.max(0,Math.round(displayedHp[id]))} / {R.maxHp(shown.fighters[id])}</b>　{status(id)}{R.area(shown.fighters[id])==='ringside'?` ／ 場外 ${(shown.fighters[id].outsideTurns||0)*4}/20`:''}</small></div>
-    </section>)}
+      <div className="fighter-hud__portrait"><img src={portraitSource(portraitBase,id==='red'?'red-protagonist':opponentPortrait,hasDamageFace(id))} alt={`${id==='red'?'主人公':'対戦相手'}・${hasDamageFace(id)?'ダメージ':'通常'}表情`} draggable={false}/></div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'PLAYER':'CPU'}</b></div><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,displayedHp[id])/R.maxHp(shown.fighters[id])*100}%`,transition:busy?'none':undefined}} /></div><small>体力 <b>{Math.max(0,Math.round(displayedHp[id]))} / {R.maxHp(shown.fighters[id])}</b><span className="native-fighter-state" title={status(id)}>{shown.fighters[id].run?'走行中':status(id).split(' / ')[0]}</span>{R.area(shown.fighters[id])==='ringside'&&<span>場外 {(shown.fighters[id].outsideTurns||0)*4}/20</span>}</small></div>
+    </section>)}</div>
     <RingBoard groggies={{red:shown.fighters.red.groggy,blue:shown.fighters.blue.groggy}} spritePreview={busy?null:spritePreview} runningFacing={{red:busy?TRAVEL_SPRITES[shown.fighters.red.travelFacing!]:undefined,blue:busy?TRAVEL_SPRITES[shown.fighters.blue.travelFacing!]:undefined}} wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
-      reserved={busy||game.hold?null:boardLocation(directionPicker?.kind==='run'?f:normalized.to)} reservedFacing={ISO[normalized.face]} onTurn={!busy&&!directionPicker&&!f.down&&!f.skip&&!f.groggy&&!f.run&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing]}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
+      reserved={busy||game.hold?null:boardLocation(previewCell)} reservedFacing={ISO[normalized.face]} onTurn={!busy&&!directionPicker&&!f.down&&!f.skip&&!f.groggy&&!f.run&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing]}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
       combatResult={null} combatResults={cues} cpuAttack={event==='reveal'&&!!revealed&&['strike','throw','submission','rope','dive','pull-down','knock-down'].includes(revealed.blue.move)} ropeAnimation={{run:cueRun,edge:ropeEdge?visibleRopeEdge||null:null}} />
-    <section className="match-message" role="status" aria-live="polite"><b>{busy?'同時攻防を解決中':directionPicker?'方向を選択':'行動を予約'}</b><span>{directionPicker?'盤面の色が付いたマスを選択してください。':message}</span>{lastRoll!==null&&<em>D100 {lastRoll}</em>}</section>
+    <section className="match-message" role="status" aria-live="polite"><b>{busy?(({reveal:'行動公開',move:'移動',attack:'攻撃',damage:'ダメージ',counter:'カウンター',lift:'起こして攻撃',grapple:'組み合い',rope:'ロープの攻防',pin:'フォール',miss:'空振り',result:'攻防の結果'} as Record<string,string>)[event]||'攻防を解決中'):directionPicker?'方向を選択':'操作'}</b><span>{directionPicker?'盤面の色が付いたマスを選択してください。':message}</span></section>
     <section className="game-action-controls native-controls" aria-label="プレイヤーの行動">
-      <div className="native-full native-plan">{revealed?`赤 ${R.NAMES[revealed.red.move]} ／ 青 ${R.NAMES[revealed.blue.move]}`:<><strong>{R.NAMES[plan.move]}</strong><span>{R.coordinate(normalized.to)} ・ {DIRECTIONS.find(d=>d.key===normalized.face)?.label}</span><small>CPU：予約済み</small></>}</div>
-      {directionPicker?<><strong>盤面の色が付いたマスを選択</strong><button type="button" className="is-subtle native-full" onClick={cancelDirection}>戻る</button>{!directionTargets.length&&<p className="native-full native-note">今の位置から選べる方向がありません。戻って移動・行動を選び直してください。</p>}</>:availableActions.map(move=><button type="button" key={move} className={plan.move===move?'is-active':undefined} disabled={busy} onClick={()=>chooseAction(move)}>{move==='rest'&&f.groggy?'体勢を立て直す':R.highAttack({...f,...normalized.to},game.fighters.blue,{...normalized,move})?(move==='throw'?'投げ（高所落とし）':'打撃（高所崩し）'):R.NAMES[move]}</button>)}
-      {plan.move==='strike'&&<div className="native-full native-row"><b>打撃の距離</b>{[1,2].map(range=><button type="button" key={range} disabled={busy} className={plan.range===range?'is-active':undefined} onClick={()=>updatePlan({range})}>{range}マス狙い</button>)}</div>}
-      {!directionPicker&&(['rope','run','carry','return'].includes(plan.move))&&<p className="native-full native-note">{plan.move==='return'?'相手の帰還位置':plan.move==='carry'?'運ぶ方向':plan.move==='rope'?'投げる方向':'走る方向'}：{TRAVEL_DIRECTIONS.find(d=>d.key===(plan.move==='rope'?plan.ropeDir:plan.move==='run'?plan.runDir:plan.move==='carry'?plan.carryDir:plan.returnDir))?.label}　<button type="button" disabled={busy} onClick={()=>chooseAction(plan.move)}>方向を選び直す</button></p>}
+      <div className="native-full native-plan">{revealed?`赤 ${R.NAMES[revealed.red.move]} ／ 青 ${R.NAMES[revealed.blue.move]}`:<><strong>{plan.move==='strike'?`打撃・${plan.range===1?'近（１マス）':'遠（２マス）'}`:R.NAMES[plan.move]}</strong><span>{plan.move==='run'?TRAVEL_DIRECTIONS.find(d=>d.key===plan.runDir)?.label:`${R.coordinate(normalized.to)} ・ ${DIRECTIONS.find(d=>d.key===normalized.face)?.label}`}</span></>}</div>
+      {directionPicker?<><button type="button" className="is-subtle native-full" onClick={cancelDirection}>戻る</button>{!directionTargets.length&&<p className="native-full native-note">今の位置から選べる方向がありません。戻って移動・行動を選び直してください。</p>}</>:availableActions.flatMap(move=>{
+        const high=R.highAttack({...f,...normalized.to},game.fighters.blue,{...normalized,move});
+        if(move==='strike'&&!high)return [1,2].map(range=><button type="button" key={`strike-${range}`} className={plan.move==='strike'&&plan.range===range?'is-active':undefined} disabled={busy} onClick={()=>updatePlan({move:'strike',range})}>打撃・{range===1?'近':'遠'}</button>);
+        return [<button type="button" key={move} className={plan.move===move?'is-active':undefined} disabled={busy} onClick={()=>chooseAction(move)}>{move==='rest'&&f.groggy?'体勢を立て直す':high?(move==='throw'?'投げ（高所落とし）':'打撃（高所崩し）'):R.NAMES[move]}</button>];
+      })}
       {!directionPicker&&error&&<p className="native-full native-error" role="alert">{error}</p>}
       {!directionPicker&&<button type="button" className="native-full native-publish" disabled={busy||!!error||!!game.winner} onClick={publish}>{busy?'攻防を解決中…':'せーので行動公開'}</button>}
-      {(f.down||f.groggy||f.run||game.hold||game.doubleCount!==null)&&<p className="native-full native-note">{hint}</p>}
     </section>
     <details className="rules-log native-help"><summary>操作・ルール</summary>
-      <p>{hint}</p><p>移動を予約したら、盤面の回転アイコンで向きを調整し、行動を選んで同時公開します。薄い赤の選手は移動先の予約です。</p>
+      <p>{hint}</p><p>移動先を押すとコマ本体が予定地へ動きます。回転アイコンで向きを調整し、行動を選んで同時公開します。実際の移動は公開後に双方同時に解決します。</p><p>盤面の↗の目印を押すとロープ・コーナーへ走る予定になります。技や別の移動先を選ぶと変更できます。打撃・近は１マス、打撃・遠は２マスを狙います。</p>
       <p>CPUは攻防開始時に予約します。あなたの未公開の移動や行動、これから出るダイスは見ません。</p>
       <p>同時公開・攻撃移動１マス。通常技１ダメージ、ダウンは復帰準備１回。カウンターは相手の攻撃を中止し、自分の予約行動を試みます。</p>
       <p>命中：打撃・投げ90%、立ち関節70%、ダウン関節80%。ロープ到達80%で戻り、20%で留まります。フォール・関節はロープ隣接ならHP０でも自動ブレイク。</p>

@@ -1063,9 +1063,8 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
           {directionTargets.map(({key,label,kind='rope',location})=>{
             const rotated=rotateWorldCell(location.row,location.column,boardRotation);
             const floorTop=(location.area==='ringside'?60:18)+(rotated.row+rotated.column)*21-(location.area==='corner'?42:0);
-            return <button key={key} type="button" aria-label={label} className={`rope-direction-target is-${kind}`} onClick={()=>onDirection(key)} style={{left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`}}/>;
+            return <button key={key} type="button" aria-label={label} className={`rope-direction-target is-${kind}`} onClick={()=>onDirection(key)} style={{left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`}}>{kind.startsWith('run')?'↗':null}</button>;
           })}
-          {reserved && !isSameLocation(reserved, wrestlers.red.location) && <WrestlerCube characterSprite="red" colorClass="corner-red" facing={rotateFacingWithBoard(reservedFacing, boardRotation)} label="赤の移動予約" style={boardPosition(reserved, boardRotation)} translucent />}
           {reserved && onTurn && <div className="piece-turn-controls" style={{...boardPosition(reserved,boardRotation),zIndex:145}} aria-label="予約した向きを回転">
             <button type="button" aria-label="右へ90度回転" onClick={()=>onTurn(turnFacing(reservedFacing,-1))}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button>
             <button type="button" aria-label="左へ90度回転" onClick={()=>onTurn(turnFacing(reservedFacing,1))}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
