@@ -38,6 +38,14 @@ test('近い走り空振りは無傷のグロッキー',()=>{
  const x=resolve(s,plan(s,'red','strike',{to:o.to,sprint:true,sprintRoute:o.route,runDir:o.direction,target:R.cell(s.fighters.blue)}),plan(s,'blue','move',{to:{r:2,c:4}}));
  assert.equal(x.state.fighters.red.hp,8);assert.ok(x.state.fighters.red.groggy);assert.ok(!x.state.fighters.red.down);
 });
+test('ロープ沿いの走りは毎マスしなり・待機を挟まない',()=>{
+ for(const [r,c,tr,tc,direction] of [[6,4,6,0,'left'],[0,2,0,6,'right'],[4,0,0,0,'up'],[2,6,6,6,'down']]){
+  const s=R.initial();Object.assign(s.fighters.red,{r,c});Object.assign(s.fighters.blue,{r:tr,c:tc,area:'corner'});
+  const o=R.sprintOptions(s,'red').find(o=>o.direction===direction&&R.sprintReach(o.to,s.fighters.blue,direction)===1);assert.ok(o);
+  const x=resolve(s,plan(s,'red','strike',{to:o.to,sprint:true,sprintRoute:o.route,runDir:direction,target:R.cell(s.fighters.blue)}),plan(s,'blue','move'));
+  const moves=x.frames.filter(f=>f.kind==='move');assert.equal(moves.length,3);assert.ok(moves.every(f=>f.ropeEdge===null));
+ }
+});
 test('遠い走りの空振りと手前の激突は低体力でダウンもある',()=>{
  for(const collision of [false,true]){
   const s=R.initial();s.fighters.red.hp=4;s.fighters.blue.c=6;
