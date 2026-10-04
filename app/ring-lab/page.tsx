@@ -83,7 +83,7 @@ export default function RingLabPage() {
   const ropeGeometry:any=plan.move==='rope'?R.ropeGeometry({...game.fighters.red,...normalized.to},game.fighters.blue,plan.ropeDir):null;
   const interceptFace=ropeGeometry?.returnLocation?R.facingToward({...game.fighters.red,...normalized.to},R.fromLocation(ropeGeometry.returnLocation)):normalized.face;
   const error = game.winner ? '' : R.validate(game,'red',plan,settings(style));
-  const previewCell = !busy&&!game.hold&&!game.fighters.red.run&&!plan.launchRun&&!['run','carry','return'].includes(plan.move) ? normalized.to : shown.fighters.red;
+  const previewCell = !busy&&!game.hold&&!game.fighters.red.run&&!plan.launchRun&&!plan.sprint&&!['run','carry','return'].includes(plan.move) ? normalized.to : shown.fighters.red;
   const fighters = Object.fromEntries((['red','blue'] as Id[]).map(id=>[id,{location:boardLocation(id==='red'?previewCell:shown.fighters[id]),facing:ISO[id==='red'&&!busy?normalized.face:shown.fighters[id].face],stance:shown.fighters[id].down?'down':'standing'}])) as Record<Id,WrestlerState>;
   const poses:Record<Id,'prone'|'supine'> = {red:shown.fighters.red.pose||'prone',blue:shown.fighters.blue.pose||'prone'};
   const status = (id:Id) => {
