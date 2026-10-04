@@ -144,7 +144,8 @@ export default function RingLabPage() {
       }
       setDisplayedHp(nextHp);previousHp=nextHp;
       setShown(frame.state);setMessage(frame.message);setEvent(frame.kind);setRotation(frame.state.view||0);setCues(frame.cues||[]);setLastRoll(frame.roll??null);setRopeEdge(frame.ropeEdge||null);setCueRun(n=>n+1);
-      if(factor)await new Promise(resolve=>window.setTimeout(resolve,frame.ms*factor));
+      // Preserve the FIXed 600 ms rope bend even when other playback is sped up.
+      if(factor)await new Promise(resolve=>window.setTimeout(resolve,frame.ropeEdge?Math.max(650,frame.ms*factor):frame.ms*factor));
     }
     if(playback.current!==run)return;
     const next=result.state as Match;
