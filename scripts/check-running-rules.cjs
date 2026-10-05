@@ -5,6 +5,20 @@ const dice=(...values)=>{let n=0;return()=>((values[n++]??50)-1)/100;};
 const resolve=(s,r,b,rng=dice())=>{const x=R.resolve(s,r,b,{},rng);assert.equal(x.error,null);return x;};
 let passed=0;const test=(name,f)=>{f();passed++;console.log('PASS',name);};
 const adjacent=()=>{const s=R.initial();s.fighters.blue.c=3;return s;};
+test('ロープ停止後は短距離でも相手へ走って近・遠攻撃できる',()=>{
+ for(const range of [1,2]){
+  const s=R.initial();Object.assign(s.fighters.red,{r:6,c:3});Object.assign(s.fighters.blue,{r:3,c:3,groggy:true});
+  const o=R.sprintOptions(s,'red').find(o=>R.sprintReach(o.to,s.fighters.blue,o.direction)===range);assert.ok(o);
+  assert.equal(o.route.length,3-range);
+  const x=resolve(s,plan(s,'red','strike',{to:o.to,sprint:true,sprintRoute:o.route,runDir:o.direction,target:R.cell(s.fighters.blue),range}),plan(s,'blue','rest'),dice(50,50,99));
+  assert.equal(x.state.fighters.blue.hp,7);assert.equal(x.state.round,2);
+ }
+});
+test('短い対角線も走れるが、直線・対角線外は選べない',()=>{
+ const s=R.initial();Object.assign(s.fighters.red,{r:2,c:2});Object.assign(s.fighters.blue,{r:4,c:4});
+ const o=R.sprintOptions(s,'red').find(o=>o.direction==='down-right');assert.ok(o);assert.equal(o.route.length,1);
+ s.fighters.blue.c=5;assert.equal(R.sprintOptions(s,'red').length,0);
+});
 test('グロッキーは正面のみ、移動と方向転換を固定',()=>{
  for(const face of ['up','right','down','left']){
   const s=R.initial();Object.assign(s.fighters.red,{r:3,c:3,face,groggy:true});
