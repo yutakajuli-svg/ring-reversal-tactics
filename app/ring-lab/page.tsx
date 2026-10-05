@@ -5,6 +5,7 @@ import { RingTrial as R } from '../../lib/simultaneous-rules';
 import { RingBoard, type CharacterFacing, type BoardLocation, type BoardRotation, type RingSide, type WrestlerState } from './ring-board';
 import './ring-lab.css';
 import FixedManualTest from './fixed-manual-test';
+import { commentaryFrames, plannedRunPath } from '../../lib/match-commentary';
 import { OPPONENT_PORTRAITS, PORTRAIT_TIMING, damagedPortraits, portraitSource, type PortraitHp } from '../../lib/portrait-presentation';
 
 type Id = 'red' | 'blue';
@@ -168,14 +169,16 @@ export default function RingLabPage() {
     const run=++playback.current;
     const factor=speed==='instant'?0:speed==='fast'?.38:1;
     let previousHp:PortraitHp={red:game.fighters.red.hp,blue:game.fighters.blue.hp};
-    for(const frame of result.frames as Frame[]){
+    const frames=commentaryFrames(game,result.frames,result.plans) as Frame[];
+    for(let index=0;index<frames.length;index++){
       if(playback.current!==run)return;
+      const frame=frames[index],nextFrame=frames[index+1];
+      const continued=nextFrame?.message===frame.message&&nextFrame.kind===frame.kind&&!nextFrame.cues?.length&&!Object.keys(nextFrame.damages||{}).length;
       const nextHp:PortraitHp={red:frame.state.fighters.red.hp,blue:frame.state.fighters.blue.hp};
       const damaged=damagedPortraits(previousHp,nextHp,frame.damages);
+      setShown(frame.state);setMessage(frame.message);setEvent(damaged.length?'damage':frame.kind);setRotation(frame.state.view||0);setCues(frame.cues||[]);setLastRoll(frame.roll??null);setRopeEdge(frame.ropeEdge||null);setCueRun(n=>n+1);
       if(damaged.length&&factor){
-        setShown(frame.state);setRotation(frame.state.view||0);setCues(frame.cues||[]);setLastRoll(frame.roll??null);setRopeEdge(frame.ropeEdge||null);setCueRun(n=>n+1);
-        setDamageFaces(damaged);setPortraitImpact(n=>n+1);setEvent('damage');
-        setMessage(damaged.map(id=>`${id==='red'?'赤':'青'}に ${frame.damages?.[id]||previousHp[id]-nextHp[id]} ダメージ！`).join(' ／ '));
+        setDamageFaces(damaged);setPortraitImpact(n=>n+1);
         const from=previousHp;
         await new Promise<void>(resolve=>{
           const started=performance.now(),duration=PORTRAIT_TIMING.feedback*factor;
@@ -188,14 +191,18 @@ export default function RingLabPage() {
           requestAnimationFrame(tick);
         });
         const remaining=(PORTRAIT_TIMING.line+PORTRAIT_TIMING.afterglow+PORTRAIT_TIMING.outro-PORTRAIT_TIMING.feedback)*factor;
-        await new Promise(resolve=>window.setTimeout(resolve,remaining));
+        await new Promise(resolve=>window.setTimeout(resolve,Math.max(900,remaining)));
         if(playback.current!==run)return;
         setDamageFaces([]);
       }
       setDisplayedHp(nextHp);previousHp=nextHp;
-      setShown(frame.state);setMessage(frame.message);setEvent(frame.kind);setRotation(frame.state.view||0);setCues(frame.cues||[]);setLastRoll(frame.roll??null);setRopeEdge(frame.ropeEdge||null);setCueRun(n=>n+1);
-      // Preserve the FIXed 600 ms rope bend even when other playback is sped up.
-      if(factor)await new Promise(resolve=>window.setTimeout(resolve,frame.ropeEdge?Math.max(650,frame.ms*factor):frame.ms*factor));
+      // Keep every FIX movement step and the full 600 ms rope bend.
+      if(factor){
+        const movementTime=frame.ropeEdge?Math.max(650,frame.ms*factor):frame.ms*factor;
+        await new Promise(resolve=>window.setTimeout(resolve,movementTime));
+        // Continuous movement shares one message; pause at the end so its meaning can be read.
+        if(!continued&&!damaged.length)await new Promise(resolve=>window.setTimeout(resolve,Math.max(0,900-movementTime)));
+      }
     }
     if(playback.current!==run)return;
     const next=result.state as Match;
@@ -235,7 +242,7 @@ export default function RingLabPage() {
     const blob=new Blob([JSON.stringify({version:'simultaneous-native-20261003-outside',game,plan},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ring-match-log.json';a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
-  const runPath = plan.sprintRoute || (interceptPicking&&ropeGeometry?.returnLocation?R.path(R.fromLocation(ropeGeometry.ropeLocation),R.fromLocation(ropeGeometry.returnLocation),null,16)||[]:game.fighters.red.run ? R.path(game.fighters.red,game.fighters.red.run.origin,null,16)||[] : []);
+  const runPath = busy ? [] : plannedRunPath(game,plan,interceptPicking);
   const groups = new Map<number,string[]>();for(const line of game.log){if(!groups.has(line.round))groups.set(line.round,[]);groups.get(line.round)!.push(line.text);}
   const f=game.fighters.red;
   const selectedAttack=interceptPicking?plan.ropeIntercept:plan;
@@ -277,10 +284,12 @@ export default function RingLabPage() {
       {damageFaces.includes(id)&&<span key={portraitImpact} className="fighter-hud__impact" aria-hidden="true" style={{animationDuration:`${PORTRAIT_TIMING.feedback*(speed==='fast'?.38:1)}ms`}}/>}
       <div className="fighter-hud__portrait"><img src={portraitSource(portraitBase,id==='red'?'red-protagonist':opponentPortrait,hasDamageFace(id))} alt={`${id==='red'?'主人公':'対戦相手'}・${hasDamageFace(id)?'ダメージ':'通常'}表情`} draggable={false}/></div><div className="fighter-hud__body"><div className="fighter-hud__heading"><b>{id==='red'?'PLAYER':'CPU'}</b></div><div className="fighter-hud__meter"><i style={{width:`${Math.max(0,displayedHp[id])/R.maxHp(shown.fighters[id])*100}%`,transition:busy?'none':undefined}} /></div><small>体力 <b>{Math.max(0,Math.round(displayedHp[id]))} / {R.maxHp(shown.fighters[id])}</b><span className="native-fighter-state" title={status(id)}>{shown.fighters[id].run?.pending?'迎撃待ち':shown.fighters[id].run?'走行中':status(id).split(' / ')[0]}</span>{R.area(shown.fighters[id])==='ringside'&&<span>場外 {(shown.fighters[id].outsideTurns||0)*4}/20</span>}</small></div>
     </section>)}</div>
+    <div className={busy?"native-ring-stage is-commentating":"native-ring-stage"}>
     <RingBoard groggies={{red:shown.fighters.red.groggy,blue:shown.fighters.blue.groggy}} spritePreview={busy?null:spritePreview} runningFacing={{red:busy?TRAVEL_SPRITES[shown.fighters.red.travelFacing!]:undefined,blue:busy?TRAVEL_SPRITES[shown.fighters.blue.travelFacing!]:undefined}} wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
       bubble={busy?null:bubble} reserved={reservedCell?boardLocation(reservedCell):null} reservedFacing={ISO[normalized.face]} reservedSpriteFacing={plan.sprint?TRAVEL_SPRITES[plan.runDir]:undefined} onTurn={!busy&&!directionPicker&&!f.down&&!f.skip&&!f.groggy&&!f.run&&!plan.launchRun&&!plan.sprint&&!interceptPicking&&!intercept&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing],target:undefined}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
       combatResult={null} combatResults={cues} cpuAttack={event==='reveal'&&!!revealed&&['strike','throw','submission','rope','dive','pull-down','knock-down'].includes(revealed.blue.move)} ropeAnimation={{run:cueRun,edge:ropeEdge?visibleRopeEdge||null:null}} />
-    <section className="match-message" role="status" aria-live="polite"><b>{busy?(({reveal:'行動公開',move:'移動',attack:'攻撃',damage:'ダメージ',counter:'カウンター',lift:'起こして攻撃',grapple:'組み合い',rope:'ロープの攻防',pin:'フォール',miss:'空振り',result:'攻防の結果'} as Record<string,string>)[event]||'攻防を解決中'):directionPicker?'方向を選択':'操作'}</b><span>{directionPicker?'盤面の色が付いたマスを選択してください。':message}</span></section>
+    <section className="match-message" data-commentary={busy?'true':'false'} role="status" aria-live="polite"><b>{busy?'実況':directionPicker?'方向を選択':'操作'}</b><span>{directionPicker?'盤面の色が付いたマスを選択してください。':message}</span></section>
+    </div>
     <section className="game-action-controls native-controls" aria-label="プレイヤーの行動">
       {!busy&&!directionPicker&&!f.down&&!f.groggy&&!f.skip&&!game.hold&&!f.run&&!intercept&&<div className="native-full native-mode">{(['move','attack','run'] as const).map(mode=><button type="button" key={mode} className={inputMode===mode?'is-active':undefined} disabled={mode==='run'&&!sprintChoices.length} onClick={()=>{setInterceptPicking(false);setInputMode(mode);updatePlan({move:mode==='move'?'move':'strike',target:undefined,sprint:false,sprintRoute:undefined,ropeIntercept:undefined,launchRun:false,to:plan.sprint?R.cell(f) as Cell:plan.to});setMessage(mode==='run'?'走る到着マスを選び、その先の攻撃先を選んでください。':mode==='attack'?'色の付いたマスで攻撃先を選んでください。':'移動先を選んでください。');}}>{mode==='move'?'移動':mode==='attack'?'攻撃':'走り攻撃'}</button>)}</div>}
       <div className="native-full native-plan">{revealed?`赤 ${R.NAMES[revealed.red.move]} ／ 青 ${R.NAMES[revealed.blue.move]}`:<><strong>{interceptPicking||intercept?'迎撃：':f.run?.kind==='thrown'?'戻る：':''}{needsTarget?(inputMode==='run'?'走るマスを選択':'攻撃先を選択'):(plan.sprint?'走り ':'')+R.NAMES[selectedAttack?.move||plan.move]}</strong><span>{selectedAttack?.target?`狙い ${R.coordinate(selectedAttack.target)}`:plan.move==='run'?TRAVEL_DIRECTIONS.find(d=>d.key===plan.runDir)?.label:`${R.coordinate(normalized.to)} ・ ${DIRECTIONS.find(d=>d.key===normalized.face)?.label}`}</span></>}</div>

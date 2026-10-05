@@ -1068,7 +1068,7 @@ export function RingBoard({wrestlers, poses, rotation:boardRotation, reachable:i
             const position={left:`calc(50% + ${(rotated.column-rotated.row)*42}px)`,top:`${floorTop}px`};
             const floorDepth=location.area==='ringside'?2:location.area==='corner'?61+rotated.row+rotated.column:24;
             return <span key={key}>
-              <span aria-hidden="true" className="target-floor-highlight" data-kind={kind} style={{...position,zIndex:floorDepth}} />
+              <span aria-hidden="true" className="target-floor-highlight" data-kind={kind} data-on-path={reboundPreviewKeys.has(location.row+'-'+location.column)?'true':undefined} style={{...position,zIndex:floorDepth}} />
               <button type="button" aria-label={label} className={`rope-direction-target target-hit-area is-${kind}`} onClick={()=>onDirection(key)} style={{...position,background:'transparent',border:0,boxShadow:'none',filter:'none'}} />
             </span>;
           })}
