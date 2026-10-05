@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RingTrial as R } from '../../lib/simultaneous-rules';
 import { PERSONALITY_AXES, DEFAULT_PERSONALITY } from '../../lib/cpu-personality';
+import { randomCpuSettings, recordCpuSettings, cpuSettingsFooter } from '../../lib/cpu-settings';
 import { RingBoard, type CharacterFacing, type BoardLocation, type BoardRotation, type RingSide, type WrestlerState } from './ring-board';
 import './ring-lab.css';
 import FixedManualTest from './fixed-manual-test';
@@ -51,6 +52,9 @@ export default function RingLabPage() {
   const [rotation,setRotation] = useState<BoardRotation>(0);
   const [style,setStyle] = useState('balanced');
   const [personality,setPersonality] = useState<Personality>(DEFAULT_PERSONALITY);
+  const [cpuReady,setCpuReady] = useState(false);
+  const randomizedCpu = useRef(false);
+  const [cpuSettingsHistory,setCpuSettingsHistory] = useState<{round:number;style:string;personality:Personality}[]>([]);
   const [speed,setSpeed] = useState('fast');
   const [event,setEvent] = useState('idle');
   const [scenario,setScenario] = useState('normal');
@@ -65,7 +69,13 @@ export default function RingLabPage() {
   const [portraitImpact,setPortraitImpact] = useState(0);
   const [displayedHp,setDisplayedHp] = useState<PortraitHp>(()=>({red:game.fighters.red.hp,blue:game.fighters.blue.hp}));
   const portraitBase = import.meta.env.BASE_URL;
-  useEffect(()=>{setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);},[]);
+  useEffect(()=>{
+    if(randomizedCpu.current)return;randomizedCpu.current=true;
+    const next=randomCpuSettings();setStyle(next.style);setPersonality(next.personality);
+    cpu.current=R.chooseCPU(game,settings(next.style,next.personality)) as Plan;initializedRound.current=game.round;
+    setCpuReady(true);
+    setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);
+  },[]);
   useEffect(()=>{
     // Preload each matching expression to avoid a blank portrait at impact.
     for(const character of ['red-protagonist',opponentPortrait])for(const damage of [false,true]){
@@ -77,8 +87,8 @@ export default function RingLabPage() {
   const playback = useRef(0);
   const initializedRound = useRef(0);
   useEffect(()=>{
-    if(initializedRound.current !== game.round){cpu.current=R.chooseCPU(game,settings(style,personality)) as Plan;initializedRound.current=game.round;}
-  },[game,style,personality]);
+    if(cpuReady&&initializedRound.current !== game.round){cpu.current=R.chooseCPU(game,settings(style,personality)) as Plan;initializedRound.current=game.round;}
+  },[game,style,personality,cpuReady]);
   useEffect(()=>()=>{playback.current++;},[]);
 
   const normalized = R.normalize(game,'red',plan) as Plan;
@@ -172,10 +182,11 @@ export default function RingLabPage() {
   };
 
   const publish = async () => {
-    if(committed.current||game.winner||error||directionPicker)return;
+    if(!cpuReady||committed.current||game.winner||error||directionPicker)return;
     const blue=cpu.current || R.chooseCPU(game,settings(style,personality)) as Plan;
     const result=R.resolve(game,plan,blue,settings(style,personality));
     if(!('plans' in result)){setMessage(result.error);return;}
+    setCpuSettingsHistory(previous=>recordCpuSettings(previous,game.round,style,personality));
     committed.current=true;setBusy(true);setRevealed(result.plans);cpu.current=null;
     const run=++playback.current;
     const factor=speed==='instant'?0:speed==='fast'?.38:1;
@@ -223,7 +234,7 @@ export default function RingLabPage() {
     setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
     setMessage(next.winner?next.finish:'次の攻防。移動・行動を予約してください。');
   };
-  const reset = (scene='normal') => {
+  const reset = (scene='normal',randomizeCpu=true) => {
     if(busy)return;
     playback.current++;
     setInputMode('move');setMovementSelected(false);setBubble(null);
@@ -244,13 +255,17 @@ export default function RingLabPage() {
     if(scene==='outside-dive'){Object.assign(next.fighters.red,{r:6,c:0,area:'corner',face:'down'});Object.assign(next.fighters.blue,{r:7,c:1,area:'ringside',groggy:true});}
     if(scene==='red-groggy'){Object.assign(next.fighters.red,{groggy:true});}
     if(scene==='outside'){Object.assign(next.fighters.red,{r:7,c:2,area:'ringside',face:'right'});Object.assign(next.fighters.blue,{r:7,c:3,area:'ringside',face:'left'});}
-    cpu.current=R.chooseCPU(next,settings(style,personality)) as Plan;initializedRound.current=next.round;
+    const nextCpu=randomizeCpu?randomCpuSettings():{style,personality};
+    setStyle(nextCpu.style);setPersonality(nextCpu.personality);setCpuSettingsHistory([]);
+    cpu.current=R.chooseCPU(next,settings(nextCpu.style,nextCpu.personality)) as Plan;initializedRound.current=next.round;
     setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);
     setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
     setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setInterceptPicking(false);setInputMode('move');setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('移動先、攻撃先、技の順に選んで行動決定。');
   };
+  const cpuFooter=cpuSettingsFooter(style,personality,cpuSettingsHistory);
   const saveLog=()=>{
-    const blob=new Blob([JSON.stringify({version:'simultaneous-native-20261003-outside',game,plan},null,2)],{type:'application/json'});
+    const savedGame={...game,log:[...game.log,{round:game.round,text:cpuFooter.join('\n')}]};
+    const blob=new Blob([JSON.stringify({version:'simultaneous-native-20261005-cpu-settings',game:savedGame,plan,cpuSettings:{style,personality},cpuSettingsHistory,logFooter:cpuFooter},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ring-match-log.json';a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   const runPath = busy ? [] : plannedRunPath(game,plan,interceptPicking);
@@ -309,7 +324,7 @@ export default function RingLabPage() {
         return [<button type="button" key={move} className={selectedAttack?.move===move?'is-active':undefined} disabled={busy} onClick={()=>chooseAction(move)}>{move==='move'&&f.run?.kind==='thrown'?'戻りの攻防':move==='move'&&f.run?.kind==='self'?'攻撃しない':move==='rest'&&f.groggy?'体勢を立て直す':high?(move==='throw'?'投げ（高所落とし）':'打撃（高所崩し）'):R.NAMES[move]}</button>];
       })}
       {!directionPicker&&error&&<p className="native-full native-error" role="alert">{error}</p>}
-      {!directionPicker&&<div className="native-full native-confirm-row"><button type="button" className="is-subtle" disabled={busy||!!game.winner} onClick={cancelPlan}>キャンセル</button><button type="button" className="native-publish" disabled={busy||!!error||!!game.winner||needsTarget} onClick={publish}>{busy?'攻防を解決中…':'行動決定'}</button></div>}
+      {!directionPicker&&<div className="native-full native-confirm-row"><button type="button" className="is-subtle" disabled={busy||!!game.winner} onClick={cancelPlan}>キャンセル</button><button type="button" className="native-publish" disabled={!cpuReady||busy||!!error||!!game.winner||needsTarget} onClick={publish}>{busy?'攻防を解決中…':'行動決定'}</button></div>}
     </section>
     <details className="rules-log native-help"><summary>操作・ルール</summary>
       <p>{hint}</p><p>「移動」で色の付いたマスを選び、回転アイコンで向きを調整。「攻撃」で狙うマスを選び、下の技を選んで行動決定。２マス先は打撃のみです。半透明コマは移動予定。決定後に実体が動きます。決定までは選び直せます。</p><p>「走り攻撃」で到着マスを選び、その先１〜２マスの攻撃先を選びます。往復と打撃まで１行動。直線・対角線だけ走れます。走れるマスも同じ色です。選択した直後の吹き出しで「移動」「走る」を確認できます。迎撃も帰り道のマスを選んで技を決めます。</p>
@@ -326,6 +341,7 @@ export default function RingLabPage() {
     <details className="rules-log native-log"><summary>判定ログ（{game.log.length}件）</summary>
       <button type="button" onClick={saveLog}>試合ログを保存</button>
       <ol>{[...groups].reverse().map(([round,lines])=><li key={round}><strong>{round?`攻防 ${round}`:'試合開始'}</strong>{lines.map((line,i)=><p key={i}>{line}</p>)}</li>)}</ol>
+      <div aria-label="CPU設定の記録">{cpuFooter.map((line:string,index:number)=><p key={index}>{line}</p>)}</div>
     </details>
     <details className="lab-console"><summary className="lab-console__label">試遊設定</summary><div className="native-row">
       <label>CPU傾向 <select value={style} disabled={busy} onChange={e=>{const value=e.target.value;setStyle(value);cpu.current=R.chooseCPU(game,settings(value,personality)) as Plan;}}><option value="balanced">バランス</option><option value="striker">打撃寄り</option><option value="power">投げ寄り</option><option value="technical">関節技寄り</option></select></label>
@@ -334,7 +350,7 @@ export default function RingLabPage() {
       <button type="button" disabled={busy} onClick={()=>{const pick=(axis:number)=>PERSONALITY_AXES[axis][Math.floor(Math.random()*3)];const next={a:pick(0),b:pick(1),c:pick(2)};setPersonality(next);cpu.current=R.chooseCPU(game,settings(style,next)) as Plan;}}>性格をランダムにする</button>
       <label>演出速度 <select value={speed} disabled={busy} onChange={e=>setSpeed(e.target.value)}><option value="normal">通常</option><option value="fast">速め</option><option value="instant">即時</option></select></label>
       <label>開始場面 <select value={scenario} disabled={busy} onChange={e=>setScenario(e.target.value)}><option value="normal">通常・HP８</option><option value="late">終盤・双方HP１</option><option value="ground">青がダウン</option><option value="rope">ロープ際・青HP０</option><option value="running">ロープスロー迎撃</option><option value="dive">コーナーの飛び技</option><option value="high">高所崩し・高所落とし</option><option value="corner-run">対角線のコーナー走行</option><option value="rope-side-run">ロープ沿いの走り攻撃</option><option value="corner-throw">コーナースロー</option><option value="groggy">コーナー隣・青グロッキー</option><option value="carry">ロープ際から引きずる</option><option value="return">場外から連れ戻す</option><option value="count">場外カウント16・帰還</option><option value="outside-dive">コーナーから場外へ飛ぶ</option><option value="red-groggy">赤グロッキー</option><option value="outside">場外の打撃・投げ</option></select></label>
-      <button type="button" disabled={busy} onClick={()=>reset(scenario)}>この場面から</button><button type="button" disabled={busy} onClick={()=>reset()}>試合を初期化</button><button type="button" disabled={busy} onClick={()=>{const next=rotation===0?2:0;setRotation(next);setGame(s=>({...s,view:next}));}}>リングを反対側から見る</button><button type="button" disabled={busy} onClick={()=>setManual(true)}>前版の手動確認を開く</button>
+      <button type="button" disabled={busy} onClick={()=>reset(scenario,false)}>この場面から</button><button type="button" disabled={busy} onClick={()=>reset()}>試合を初期化</button><button type="button" disabled={busy} onClick={()=>{const next=rotation===0?2:0;setRotation(next);setGame(s=>({...s,view:next}));}}>リングを反対側から見る</button><button type="button" disabled={busy} onClick={()=>setManual(true)}>前版の手動確認を開く</button>
     </div>
       <label className="native-sprite-preview">キャラ８方向の表示確認 <select value={spritePreview||'match'} disabled={busy} onChange={e=>setSpritePreview(e.target.value==='match'?null:e.target.value as CharacterFacing)}><option value="match">試合の向きに戻す</option><option value="right-front">右手前（既存）</option><option value="front">正面（追加）</option><option value="left-front">左手前（既存）</option><option value="profile-left">左横（追加）</option><option value="left-back">左奥（既存）</option><option value="back">背面（追加）</option><option value="right-back">右奥（既存）</option><option value="profile-right">右横（追加）</option></select><small>立ち姿の表示だけを切り替えます。選択した行動・向きは変わりません。</small></label>
     </details>
