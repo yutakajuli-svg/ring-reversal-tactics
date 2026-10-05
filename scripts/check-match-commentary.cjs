@@ -19,8 +19,26 @@ function playback(s,r,b,rng){
 }
 let s=adjacent();
 let frames=playback(s,plan(s,'red','strike'),plan(s,'blue','strike'),()=>.5);
-assert.ok(frames.some(f=>f.kind==='announce'&&f.message==='赤が青に打撃攻撃！'));
-assert.ok(frames.some(f=>/青にヒット/.test(f.message)));
+assert.equal(frames.filter(f=>f.kind==='announce').length,1);
+assert.ok(frames.some(f=>f.message==='両者、打撃を繰り出す！'));
+assert.ok(frames.some(f=>f.message.startsWith('相打ち！互いにヒット！')));
+assert.ok(!frames.some(f=>/赤にヒット.*青にヒット|青にヒット.*赤にヒット/.test(f.message)));
+s=adjacent();frames=playback(s,plan(s,'red','strike'),plan(s,'blue','strike'),dice(99,99,1,99,99));
+assert.ok(frames.some(f=>f.message.startsWith('赤の打撃が青を捉えた！青の攻撃は空振り！')));
+s=adjacent();frames=playback(s,plan(s,'red','strike'),plan(s,'blue','strike'),()=>.98);
+assert.ok(frames.some(f=>f.message==='互いに届かない！両者の攻撃は空振り！'));
+for(const [red,blue] of [['throw','throw'],['submission','submission'],['rope','rope'],['rope','throw'],['submission','rope']]){
+ for(const die of [20,60,90]){
+  s=adjacent();const values=red==='throw'&&blue==='throw'?[99,99,die]:[99,99,...[red,blue].filter(m=>m!=='rope').map(()=>1),die];
+  frames=playback(s,plan(s,'red',red),plan(s,'blue',blue),dice(...values,40,50,99));
+  const outcome=frames.find(f=>f.contestResult&&f.kind!=='announce');assert.ok(outcome);
+  assert.equal(outcome.contestResult.winner,die<=40?'red':die<=80?'blue':null);
+  assert.ok(outcome.message.includes(die>80?'膠着':`${die<=40?'赤':'青'}が崩した！`));
+  assert.ok(!outcome.message.includes('空振り'));
+  assert.equal(frames.filter(f=>/組み合う|互いに崩しにかかる/.test(f.message)).length,1);
+  if(red==='rope'&&blue==='rope'&&die<=80)assert.ok(frames.some(f=>f.message===`${die<=40?'青':'赤'}、ロープにバウンド！`));
+ }
+}
 s=adjacent();frames=playback(s,plan(s,'red','strike'),plan(s,'blue','move'),()=>.98);
 assert.ok(frames.some(f=>/赤の攻撃は空振り/.test(f.message)));
 s=adjacent();const rope=plan(s,'red','rope',{ropeDir:'right',ropeIntercept:{move:'strike',target:{r:3,c:3},range:1}});
