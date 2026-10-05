@@ -38,6 +38,7 @@ export default function RingLabPage() {
   const [shown,setShown] = useState<Match>(game);
   const [plan,setPlan] = useState<Plan>(()=>defaultPlan(game));
   const [inputMode,setInputMode] = useState<'move'|'attack'|'run'>('move');
+  const [movementSelected,setMovementSelected] = useState(false);
   const [interceptPicking,setInterceptPicking]=useState(false);
   const [bubble,setBubble] = useState<{location:BoardLocation;text:string}|null>(null);
   useEffect(()=>{if(!bubble)return;const timer=window.setTimeout(()=>setBubble(null),1100);return()=>window.clearTimeout(timer);},[bubble]);
@@ -120,6 +121,7 @@ export default function RingLabPage() {
       setBubble({location,text:'攻撃先'});setMessage('攻撃先を選択しました。下の技を選んで行動決定。');return;
     }
     setPlan(p=>({...p,to,target:undefined,launchRun:false,sprint:false,sprintRoute:undefined,move:'move'}));
+    setMovementSelected(true);
     setBubble({location,text:'移動'});
     setMessage('移動予約済み。回転アイコンで向きを調整できます。');
   };
@@ -159,6 +161,12 @@ export default function RingLabPage() {
     setDirectionPicker(null);setMessage(directionPicker.kind==='rope'?'帰り道から迎撃先と技を予約してください。':'方向を予約しました。行動公開で攻防を判定します。');
   };
   const cancelDirection = () => {if(directionPicker){setPlan(directionPicker.previous);setDirectionPicker(null);}};
+  const cancelPlan = () => {
+    if(busy)return;
+    setPlan(defaultPlan(game));setMovementSelected(false);setInputMode('move');
+    setInterceptPicking(false);setDirectionPicker(null);setBubble(null);
+    setMessage('予約をキャンセルしました。移動先や攻撃先を選び直してください。');
+  };
 
   const publish = async () => {
     if(committed.current||game.winner||error||directionPicker)return;
@@ -208,14 +216,14 @@ export default function RingLabPage() {
     const next=result.state as Match;
     cpu.current=next.winner?null:R.chooseCPU(next,settings(style)) as Plan;
     initializedRound.current=next.round;
-    setInputMode('move');setBubble(null);setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setInterceptPicking(false);setRevealed(null);setEvent('idle');setCues([]);setRopeEdge(null);setBusy(false);committed.current=false;
+    setInputMode('move');setMovementSelected(false);setBubble(null);setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setInterceptPicking(false);setRevealed(null);setEvent('idle');setCues([]);setRopeEdge(null);setBusy(false);committed.current=false;
     setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
     setMessage(next.winner?next.finish:'次の攻防。移動・行動を予約してください。');
   };
   const reset = (scene='normal') => {
     if(busy)return;
     playback.current++;
-    setInputMode('move');setBubble(null);
+    setInputMode('move');setMovementSelected(false);setBubble(null);
     const next=initial();
     if(scene==='late'){next.fighters.blue.c=3;next.fighters.red.hp=1;next.fighters.blue.hp=1;}
     if(scene==='ground'){next.fighters.blue.c=3;next.fighters.blue.hp=3;next.fighters.blue.down=true;next.fighters.blue.pose='supine';}
@@ -286,7 +294,7 @@ export default function RingLabPage() {
     </section>)}</div>
     <div className={busy?"native-ring-stage is-commentating":"native-ring-stage"}>
     <RingBoard groggies={{red:shown.fighters.red.groggy,blue:shown.fighters.blue.groggy}} spritePreview={busy?null:spritePreview} runningFacing={{red:busy?TRAVEL_SPRITES[shown.fighters.red.travelFacing!]:undefined,blue:busy?TRAVEL_SPRITES[shown.fighters.blue.travelFacing!]:undefined}} wrestlers={fighters} poses={poses} rotation={rotation} reachable={reachable} onSelect={select}
-      bubble={busy?null:bubble} reserved={reservedCell?boardLocation(reservedCell):null} reservedFacing={ISO[normalized.face]} reservedSpriteFacing={plan.sprint?TRAVEL_SPRITES[plan.runDir]:undefined} onTurn={!busy&&!directionPicker&&!f.down&&!f.skip&&!f.groggy&&!f.run&&!plan.launchRun&&!plan.sprint&&!interceptPicking&&!intercept&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing],target:undefined}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
+      bubble={busy?null:bubble} reserved={reservedCell?boardLocation(reservedCell):null} reservedFacing={ISO[normalized.face]} reservedSpriteFacing={plan.sprint?TRAVEL_SPRITES[plan.runDir]:undefined} onTurn={movementSelected&&!busy&&!directionPicker&&!f.down&&!f.skip&&!f.groggy&&!f.run&&!plan.launchRun&&!plan.sprint&&!interceptPicking&&!intercept&&!game.hold&&!game.winner&&plan.move!=='run'?(facing)=>updatePlan({face:OPPOSITE_ISO[facing],target:undefined}):null} directionTargets={busy?[]:directionTargets} onDirection={chooseDirection} runPath={runPath.map((p:Cell)=>({row:p.r,column:p.c}))}
       combatResult={null} combatResults={cues} cpuAttack={event==='reveal'&&!!revealed&&['strike','throw','submission','rope','dive','pull-down','knock-down'].includes(revealed.blue.move)} ropeAnimation={{run:cueRun,edge:ropeEdge?visibleRopeEdge||null:null}} />
     <section className="match-message" data-commentary={busy?'true':'false'} role="status" aria-live="polite"><b>{busy?'実況':directionPicker?'方向を選択':'操作'}</b><span>{directionPicker?'盤面の色が付いたマスを選択してください。':message}</span></section>
     </div>
@@ -298,7 +306,7 @@ export default function RingLabPage() {
         return [<button type="button" key={move} className={selectedAttack?.move===move?'is-active':undefined} disabled={busy} onClick={()=>chooseAction(move)}>{move==='move'&&f.run?.kind==='thrown'?'戻りの攻防':move==='move'&&f.run?.kind==='self'?'攻撃しない':move==='rest'&&f.groggy?'体勢を立て直す':high?(move==='throw'?'投げ（高所落とし）':'打撃（高所崩し）'):R.NAMES[move]}</button>];
       })}
       {!directionPicker&&error&&<p className="native-full native-error" role="alert">{error}</p>}
-      {!directionPicker&&<button type="button" className="native-full native-publish" disabled={busy||!!error||!!game.winner||needsTarget} onClick={publish}>{busy?'攻防を解決中…':'行動決定'}</button>}
+      {!directionPicker&&<div className="native-full native-confirm-row"><button type="button" className="is-subtle" disabled={busy||!!game.winner} onClick={cancelPlan}>キャンセル</button><button type="button" className="native-publish" disabled={busy||!!error||!!game.winner||needsTarget} onClick={publish}>{busy?'攻防を解決中…':'行動決定'}</button></div>}
     </section>
     <details className="rules-log native-help"><summary>操作・ルール</summary>
       <p>{hint}</p><p>「移動」で色の付いたマスを選び、回転アイコンで向きを調整。「攻撃」で狙うマスを選び、下の技を選んで行動決定。２マス先は打撃のみです。半透明コマは移動予定。決定後に実体が動きます。決定までは選び直せます。</p><p>「走り攻撃」で到着マスを選び、その先１〜２マスの攻撃先を選びます。往復と打撃まで１行動。直線・対角線だけ走れます。走れるマスも同じ色です。選択した直後の吹き出しで「移動」「走る」を確認できます。迎撃も帰り道のマスを選んで技を決めます。</p>

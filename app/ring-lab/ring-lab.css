@@ -1578,6 +1578,8 @@
 }
 .simultaneous-native .target-floor-highlight[data-kind="attack-selected"] { border:5px solid #fff; }
 .native-ring-stage { position:relative; order:3; width:100%; }
+.native-confirm-row { display:grid; grid-template-columns:1fr 2fr; gap:6px; }
+.simultaneous-native .native-confirm-row .native-publish { grid-column:auto; }
 .simultaneous-native .native-ring-stage .match-message {
   min-height:64px; margin:0 auto 8px; padding:12px 16px;
   font-size:16px; line-height:1.5;
