@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { RingTrial as R } from '../../lib/simultaneous-rules';
+import { PERSONALITY_AXES, DEFAULT_PERSONALITY } from '../../lib/cpu-personality';
 import { RingBoard, type CharacterFacing, type BoardLocation, type BoardRotation, type RingSide, type WrestlerState } from './ring-board';
 import './ring-lab.css';
 import FixedManualTest from './fixed-manual-test';
@@ -23,7 +24,8 @@ const DIRECTIONS:{key:Direction;label:string}[] = [{key:'up',label:'右奥'},{ke
 const TRAVEL_DIRECTIONS:{key:TravelDirection;label:string}[]=[...DIRECTIONS,{key:'up-left',label:'奥のコーナー'},{key:'up-right',label:'右のコーナー'},{key:'down-right',label:'手前のコーナー'},{key:'down-left',label:'左のコーナー'}];
 const TRAVEL_SPRITES:Partial<Record<TravelDirection,CharacterFacing>>={'up-left':'back','up-right':'profile-right','down-right':'front','down-left':'profile-left'};
 const OPPOSITE_ISO:Record<RingSide,Direction> = {'right-back':'up','right-front':'right','left-front':'down','left-back':'left'};
-const settings = (style:string) => ({...R.DEFAULTS,cpuStyle:style});
+type Personality = {a:string;b:string;c:string};
+const settings = (style:string,cpuPersonality?:Personality) => ({...R.DEFAULTS,cpuStyle:style,cpuPersonality});
 const initial = () => R.initial() as Match;
 const defaultPlan = (s:Match) => {
   const p=R.defaultPlan(s,'red') as Plan;
@@ -48,6 +50,7 @@ export default function RingLabPage() {
   const [revealed,setRevealed] = useState<{red:Plan;blue:Plan}|null>(null);
   const [rotation,setRotation] = useState<BoardRotation>(0);
   const [style,setStyle] = useState('balanced');
+  const [personality,setPersonality] = useState<Personality>(DEFAULT_PERSONALITY);
   const [speed,setSpeed] = useState('fast');
   const [event,setEvent] = useState('idle');
   const [scenario,setScenario] = useState('normal');
@@ -74,8 +77,8 @@ export default function RingLabPage() {
   const playback = useRef(0);
   const initializedRound = useRef(0);
   useEffect(()=>{
-    if(initializedRound.current !== game.round){cpu.current=R.chooseCPU(game,settings(style)) as Plan;initializedRound.current=game.round;}
-  },[game,style]);
+    if(initializedRound.current !== game.round){cpu.current=R.chooseCPU(game,settings(style,personality)) as Plan;initializedRound.current=game.round;}
+  },[game,style,personality]);
   useEffect(()=>()=>{playback.current++;},[]);
 
   const normalized = R.normalize(game,'red',plan) as Plan;
@@ -84,7 +87,7 @@ export default function RingLabPage() {
   const sprintChoices=R.sprintOptions(game,'red');
   const ropeGeometry:any=plan.move==='rope'?R.ropeGeometry({...game.fighters.red,...normalized.to},game.fighters.blue,plan.ropeDir):null;
   const interceptFace=ropeGeometry?.returnLocation?R.facingToward({...game.fighters.red,...normalized.to},R.fromLocation(ropeGeometry.returnLocation)):normalized.face;
-  const error = game.winner ? '' : R.validate(game,'red',plan,settings(style));
+  const error = game.winner ? '' : R.validate(game,'red',plan,settings(style,personality));
   const reservedCell = !game.hold&&!game.fighters.red.down&&!game.fighters.red.groggy&&!game.fighters.red.skip&&!game.fighters.red.run&&!['run','carry','return'].includes(plan.move)&&(!busy||['reveal','move'].includes(event)||R.same(normalized.to,shown.fighters.red)) ? normalized.to : null;
   const fighters = Object.fromEntries((['red','blue'] as Id[]).map(id=>[id,{location:boardLocation(shown.fighters[id]),facing:ISO[id==='red'&&!busy&&R.same(normalized.to,shown.fighters.red)?normalized.face:shown.fighters[id].face],stance:shown.fighters[id].down?'down':'standing'}])) as Record<Id,WrestlerState>;
   const poses:Record<Id,'prone'|'supine'> = {red:shown.fighters.red.pose||'prone',blue:shown.fighters.blue.pose||'prone'};
@@ -170,8 +173,8 @@ export default function RingLabPage() {
 
   const publish = async () => {
     if(committed.current||game.winner||error||directionPicker)return;
-    const blue=cpu.current || R.chooseCPU(game,settings(style)) as Plan;
-    const result=R.resolve(game,plan,blue,settings(style));
+    const blue=cpu.current || R.chooseCPU(game,settings(style,personality)) as Plan;
+    const result=R.resolve(game,plan,blue,settings(style,personality));
     if(!('plans' in result)){setMessage(result.error);return;}
     committed.current=true;setBusy(true);setRevealed(result.plans);cpu.current=null;
     const run=++playback.current;
@@ -214,7 +217,7 @@ export default function RingLabPage() {
     }
     if(playback.current!==run)return;
     const next=result.state as Match;
-    cpu.current=next.winner?null:R.chooseCPU(next,settings(style)) as Plan;
+    cpu.current=next.winner?null:R.chooseCPU(next,settings(style,personality)) as Plan;
     initializedRound.current=next.round;
     setInputMode('move');setMovementSelected(false);setBubble(null);setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setInterceptPicking(false);setRevealed(null);setEvent('idle');setCues([]);setRopeEdge(null);setBusy(false);committed.current=false;
     setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
@@ -241,7 +244,7 @@ export default function RingLabPage() {
     if(scene==='outside-dive'){Object.assign(next.fighters.red,{r:6,c:0,area:'corner',face:'down'});Object.assign(next.fighters.blue,{r:7,c:1,area:'ringside',groggy:true});}
     if(scene==='red-groggy'){Object.assign(next.fighters.red,{groggy:true});}
     if(scene==='outside'){Object.assign(next.fighters.red,{r:7,c:2,area:'ringside',face:'right'});Object.assign(next.fighters.blue,{r:7,c:3,area:'ringside',face:'left'});}
-    cpu.current=R.chooseCPU(next,settings(style)) as Plan;initializedRound.current=next.round;
+    cpu.current=R.chooseCPU(next,settings(style,personality)) as Plan;initializedRound.current=next.round;
     setOpponentPortrait(OPPONENT_PORTRAITS[Math.floor(Math.random()*OPPONENT_PORTRAITS.length)]);
     setDamageFaces([]);setDisplayedHp({red:next.fighters.red.hp,blue:next.fighters.blue.hp});
     setSpritePreview(null);setGame(next);setShown(next);setPlan(defaultPlan(next));setInterceptPicking(false);setInputMode('move');setDirectionPicker(null);setRevealed(null);setEvent('idle');setRotation(0);setLastRoll(null);setCues([]);setRopeEdge(null);setMessage('移動先、攻撃先、技の順に選んで行動決定。');
@@ -258,7 +261,7 @@ export default function RingLabPage() {
   const actionPreview={...game,fighters:{...game.fighters,red:{...f,...(plan.move==='run'?R.cell(f):normalized.to),face:evaluationPlan.face},blue:{...game.fighters.blue,...(selectedAttack?.target||{})}}};
   const availableActions=([...new Set([...R.actions(actionPreview,'red').filter(move=>!['carry','return'].includes(move)),...R.actions(game,'red').filter(move=>['carry','return'].includes(move))])] as Move[])
     .filter(move=>move!=='run'&&(plan.sprint||R.distance(f,normalized.to)<=1||['move','carry','return'].includes(move)||plan.move==='run'||f.run?.kind==='self'||plan.launchRun))
-    .filter(move=>move!=='pin'||!R.attackError(actionPreview,'red',{...normalized,move},settings(style)));
+    .filter(move=>move!=='pin'||!R.attackError(actionPreview,'red',{...normalized,move},settings(style,personality)));
   const categories=availableActions.filter(move=>{
     if(plan.sprint&&move!=='strike')return false;
     if(interceptPicking&&!['strike','throw','submission'].includes(move))return false;
@@ -267,7 +270,7 @@ export default function RingLabPage() {
     if(['carry','return'].includes(move))return !selectingAttack;
     if(!selectingAttack)return f.run?.kind==='thrown'&&move==='move';
     if(!selectedAttack?.target)return f.run?.kind==='thrown'&&move==='move';
-    return move!=='move'&&!R.attackError(actionPreview,'red',{...evaluationPlan,move},settings(style));
+    return move!=='move'&&!R.attackError(actionPreview,'red',{...evaluationPlan,move},settings(style,personality));
   });
   const needsTarget=interceptPicking?!plan.ropeIntercept:inputMode==='run'||selectingAttack&&f.run?.kind!=='thrown'&&!['rest','hold','escape','release','carry','return','run','move'].includes(plan.move)&&!plan.target;
   const directionTargets = directionPicker ? TRAVEL_DIRECTIONS.flatMap(d=>{
@@ -325,7 +328,9 @@ export default function RingLabPage() {
       <ol>{[...groups].reverse().map(([round,lines])=><li key={round}><strong>{round?`攻防 ${round}`:'試合開始'}</strong>{lines.map((line,i)=><p key={i}>{line}</p>)}</li>)}</ol>
     </details>
     <details className="lab-console"><summary className="lab-console__label">試遊設定</summary><div className="native-row">
-      <label>CPU傾向 <select value={style} disabled={busy} onChange={e=>{const value=e.target.value;setStyle(value);cpu.current=R.chooseCPU(game,settings(value)) as Plan;}}><option value="balanced">バランス</option><option value="striker">打撃寄り</option><option value="power">投げ寄り</option><option value="technical">関節技寄り</option></select></label>
+      <label>CPU傾向 <select value={style} disabled={busy} onChange={e=>{const value=e.target.value;setStyle(value);cpu.current=R.chooseCPU(game,settings(value,personality)) as Plan;}}><option value="balanced">バランス</option><option value="striker">打撃寄り</option><option value="power">投げ寄り</option><option value="technical">関節技寄り</option></select></label>
+      {(['a','b','c'] as const).map((axis,index)=><label key={axis} className="native-personality">{['攻める姿勢','相手への対応','ピンチの反応'][index]} <select value={personality[axis]} disabled={busy} onChange={e=>{const next={...personality,[axis]:e.target.value};setPersonality(next);cpu.current=R.chooseCPU(game,settings(style,next)) as Plan;}}>{PERSONALITY_AXES[index].map((value:string)=><option key={value} value={value}>{value}</option>)}</select></label>)}
+      <button type="button" disabled={busy} onClick={()=>{const pick=(axis:number)=>PERSONALITY_AXES[axis][Math.floor(Math.random()*3)];const next={a:pick(0),b:pick(1),c:pick(2)};setPersonality(next);cpu.current=R.chooseCPU(game,settings(style,next)) as Plan;}}>性格をランダムにする</button>
       <label>演出速度 <select value={speed} disabled={busy} onChange={e=>setSpeed(e.target.value)}><option value="normal">通常</option><option value="fast">速め</option><option value="instant">即時</option></select></label>
       <label>開始場面 <select value={scenario} disabled={busy} onChange={e=>setScenario(e.target.value)}><option value="normal">通常・HP８</option><option value="late">終盤・双方HP１</option><option value="ground">青がダウン</option><option value="rope">ロープ際・青HP０</option><option value="running">ロープスロー迎撃</option><option value="dive">コーナーの飛び技</option><option value="high">高所崩し・高所落とし</option><option value="corner-run">対角線のコーナー走行</option><option value="rope-side-run">ロープ沿いの走り攻撃</option><option value="corner-throw">コーナースロー</option><option value="groggy">コーナー隣・青グロッキー</option><option value="carry">ロープ際から引きずる</option><option value="return">場外から連れ戻す</option><option value="count">場外カウント16・帰還</option><option value="outside-dive">コーナーから場外へ飛ぶ</option><option value="red-groggy">赤グロッキー</option><option value="outside">場外の打撃・投げ</option></select></label>
       <button type="button" disabled={busy} onClick={()=>reset(scenario)}>この場面から</button><button type="button" disabled={busy} onClick={()=>reset()}>試合を初期化</button><button type="button" disabled={busy} onClick={()=>{const next=rotation===0?2:0;setRotation(next);setGame(s=>({...s,view:next}));}}>リングを反対側から見る</button><button type="button" disabled={busy} onClick={()=>setManual(true)}>前版の手動確認を開く</button>

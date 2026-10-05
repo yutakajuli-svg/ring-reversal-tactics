@@ -28,6 +28,7 @@
 .native-row { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
 .native-row button, .native-row select { min-height: 44px; padding: 7px 10px; border: 1px solid #6c778a; color: #fff; background: #222b3b; border-radius: 5px; font: inherit; }
 .native-row label { display: inline-flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.native-row label.native-personality { flex-basis:100%; }
 .native-controls button.is-active, .native-row button.is-active { border-color: #f2bf43; background: #57471f; color: #ffe09b; }
 .native-controls .native-publish { background: #f2bf43; color: #191506; font-weight: bold; }
 .native-error { color: #ffa9a9; }
